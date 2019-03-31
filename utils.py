@@ -18,8 +18,8 @@ def load_data(path: str):
 
 
 def get_metrics(true_titles: List[str], predicted_titles: List[str]) -> dict:
-    scorer = Rouge(apply_avg=True)
-    scores = scorer.get_scores(predicted_titles, true_titles)
+    scorer = Rouge()
+    scores = scorer.get_scores(predicted_titles, true_titles, avg=True)
     return scores
 
 
