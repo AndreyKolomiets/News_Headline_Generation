@@ -3,6 +3,7 @@ from typing import List
 from tqdm import tqdm
 from rouge import Rouge
 from bs4 import BeautifulSoup
+import re
 
 
 def load_data(path: str):
@@ -31,3 +32,39 @@ def parse_source(text: str) -> str:
     :return: Текст без html тегов
     """
     return BeautifulSoup(text, 'lxml').text
+
+
+class FirstSentenceTokenizer:
+    regex_split = re.compile('([а-яёa-z\"»)]{2,}(\.\s|\n))')
+    regex_date = re.compile(', \d+\s(янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек)')
+    regex_date_and_agency = re.compile(
+        ', \d+\s(янв(аря)?|фев(раля)?|мар(та)?|апр(еля)?|мая|июня?|июля?|авг(уста)?|сен(тября)?|окт(ября)?|ноя(бря)?|дек(абря)?)\s[\-—–]\s(риа новости|риа \"новости\"|р\-спорт|риа\.туризм|рапси|прайм)')
+    regex_author_and_agency = re.compile('\w+\s\w+,\s(обозреватель )?риа новости')
+
+    def __init__(self):
+        self.span = None
+
+    # TODO: выпилить лишние символы в начале и в конце возвращаемого
+    def tokenize(self, text: str) -> str:
+        x = self.regex_split.search(text)
+
+        if x is None:
+            # Вариант для текста из одного предложения
+            self.span = (0, len(text))
+            return text
+        else:
+            start = x.span()[1]
+            candidate = text[:start]
+            if self.regex_date_and_agency.search(candidate) or self.regex_author_and_agency.search(candidate):
+                y = self.regex_split.search(text[start:])
+                if y is not None:
+                    self.span = (start, start+y.span()[1])
+                    return text[start:start+y.span()[1]]
+                else:
+                    # Если после вступления есть только одно предложение
+                    self.span = (start, len(text))
+                    return text[start:]
+            else:
+                # Если все же первое предложение содержательное
+                self.span = (0, start)
+                return text[:start]
