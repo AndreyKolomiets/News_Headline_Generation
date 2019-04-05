@@ -58,13 +58,13 @@ class FirstSentenceTokenizer:
             if self.regex_date_and_agency.search(candidate) or self.regex_author_and_agency.search(candidate):
                 y = self.regex_split.search(text[start:])
                 if y is not None:
-                    self.span = (start, start+y.span()[1])
-                    return text[start:start+y.span()[1]]
+                    self.span = (start, start+y.span()[1]-2)
+                    return text[start:start+y.span()[1]-2]
                 else:
                     # Если после вступления есть только одно предложение
                     self.span = (start, len(text))
                     return text[start:]
             else:
                 # Если все же первое предложение содержательное
-                self.span = (0, start)
-                return text[:start]
+                self.span = (0, start-2)
+                return text[:start-2]
