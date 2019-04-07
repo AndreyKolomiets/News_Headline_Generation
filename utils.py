@@ -1,8 +1,9 @@
 import json
-from typing import List
+from typing import List, Iterable
 from tqdm import tqdm
 from rouge import Rouge
 from bs4 import BeautifulSoup
+from collections import Counter
 import re
 
 
@@ -68,3 +69,30 @@ class FirstSentenceTokenizer:
                 # Если все же первое предложение содержательное
                 self.span = (0, start-2)
                 return text[:start-2]
+
+
+regex_word = re.compile('[а-яёa-z\-]+')
+
+
+def get_vocab(texts: Iterable[str]):
+
+    cnt = Counter()
+    for text in tqdm(texts):
+        for word in regex_word.findall(text):
+            cnt[word] += 1
+    return cnt
+
+
+def filter_vocab(vocab: Counter, n=None, min_count=None):
+    if (n is not None) and (min_count is not None):
+        raise ValueError
+    if n is not None:
+        return {_[0] for _ in vocab.most_common(n)}
+    if min_count is not None:
+        words = set()
+        for word, cnt in vocab.most_common(len(vocab)):
+            if cnt < min_count:
+                break
+            words.add(word)
+        return words
+
