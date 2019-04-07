@@ -112,3 +112,14 @@ def filter_texts_with_punctuation(texts: List[str], vocab: Set[str]):
         filtered = [tok for tok in regex_word_and_punctuation.findall(text) if (tok in vocab) or (tok in punctuation)]
         res.append(' '.join(filtered))
     return res
+
+
+regex_punctuation_replace = re.compile('\s([!%,.:;?])')
+
+
+def filter_texts_with_punctuation_spaces(texts: List[str], vocab: Set[str]):
+    res = []
+    for text in tqdm(texts):
+        filtered = [tok for tok in regex_word_and_punctuation.findall(text) if (tok in vocab) or (tok in punctuation)]
+        res.append(regex_punctuation_replace.sub(r'\1', ' '.join(filtered)))
+    return res
