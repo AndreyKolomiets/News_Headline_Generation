@@ -1,5 +1,6 @@
 import json
 from typing import List, Iterable, Set
+import string
 from tqdm import tqdm
 from rouge import Rouge
 from bs4 import BeautifulSoup
@@ -99,3 +100,15 @@ def filter_vocab(vocab: Counter, n=None, min_count=None) -> Set[str]:
 
 def filter_texts(texts: List[str], vocab: Set[str]) -> List[str]:
     return [' '.join([w for w in regex_word.findall(text) if w in vocab]) for text in tqdm(texts)]
+
+
+regex_word_and_punctuation = re.compile('[а-яёa-z\-]+|[{}]'.format(string.punctuation))
+punctuation = set(string.punctuation)
+
+
+def filter_texts_with_punctuation(texts: List[str], vocab: Set[str]):
+    res = []
+    for text in tqdm(texts):
+        filtered = [tok for tok in regex_word_and_punctuation.findall(text) if (tok in vocab) or (tok in punctuation)]
+        res.append(' '.join(filtered))
+    return res
