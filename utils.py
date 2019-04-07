@@ -1,5 +1,5 @@
 import json
-from typing import List, Iterable
+from typing import List, Iterable, Set
 from tqdm import tqdm
 from rouge import Rouge
 from bs4 import BeautifulSoup
@@ -74,7 +74,7 @@ class FirstSentenceTokenizer:
 regex_word = re.compile('[а-яёa-z\-]+')
 
 
-def get_vocab(texts: Iterable[str]):
+def get_vocab(texts: Iterable[str]) -> Counter:
 
     cnt = Counter()
     for text in tqdm(texts):
@@ -83,7 +83,7 @@ def get_vocab(texts: Iterable[str]):
     return cnt
 
 
-def filter_vocab(vocab: Counter, n=None, min_count=None):
+def filter_vocab(vocab: Counter, n=None, min_count=None) -> Set[str]:
     if (n is not None) and (min_count is not None):
         raise ValueError
     if n is not None:
@@ -96,3 +96,6 @@ def filter_vocab(vocab: Counter, n=None, min_count=None):
             words.add(word)
         return words
 
+
+def filter_texts(texts: List[str], vocab: Set[str]) -> List[str]:
+    return [' '.join([w for w in regex_word.findall(text) if w in vocab]) for text in tqdm(texts)]
