@@ -48,6 +48,11 @@ class FirstSentenceTokenizer:
 
     # TODO: выпилить лишние символы в начале и в конце возвращаемого
     def tokenize(self, text: str) -> str:
+        """
+        Метод, извлекающий из новости первое содержательное предложение
+        :param text:
+        :return:
+        """
         x = self.regex_split.search(text)
 
         if x is None:
