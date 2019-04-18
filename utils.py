@@ -71,6 +71,17 @@ class FirstSentenceTokenizer:
                 self.span = (0, start-2)
                 return text[:start-2]
 
+    def is_non_informative(self, sentence: str) -> bool:
+        """
+        Проверяем, является ли предложение неинформативным.
+        Алгоритм тот же, что и в методе tokenize, но предполагаем, что уже сделано правильное разбиение
+        :param sentence:
+        :return:
+        """
+        if self.regex_date_and_agency.search(sentence) or self.regex_author_and_agency.search(sentence):
+            return True
+        return False
+
 
 regex_word = re.compile('[а-яёa-z\-]+')
 
