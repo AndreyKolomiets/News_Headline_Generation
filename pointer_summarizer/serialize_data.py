@@ -13,7 +13,7 @@ SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
 VOCAB_SIZE = 200000
 CHUNK_SIZE = 1000  # num examples per chunk, for the chunked data
-
+'''
 parser = argparse.ArgumentParser()
 parser.add_argument('--path_to_data', type=str, default='/home/jovyan/work/_Headline_generation/ria.json')
 parser.add_argument('--n_cores', type=int, default=10)
@@ -25,6 +25,7 @@ path_to_tokenized = '/'.join(path_to_data.split('/')[:-1]) + '/tokenized'
 texts, titles = load_data(path_to_data)
 pool = Pool(10)
 parsed = pool.map(parse_source, texts)
+'''
 
 
 def read_text_file(text_file: str):
