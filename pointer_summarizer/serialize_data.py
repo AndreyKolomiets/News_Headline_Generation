@@ -1,11 +1,8 @@
-import sys
 import os
-import hashlib
 import struct
-import subprocess
 import collections
+import numpy
 from tensorflow.core.example import example_pb2
-from tqdm import tqdm
 from multiprocessing import Pool
 import argparse
 from utils import load_data, parse_source
@@ -93,5 +90,8 @@ def write_to_bin(article_dir: str, title_dir: str, out_file: str, finished_files
 
 
 if __name__ == '__main__':
-    if not os.path.exists(path_to_tokenized):
-        os.makedirs(path_to_tokenized)
+    article_dir = '/home/jovyan/work/_Headline_generation/articles_tokenized/'
+    title_dir = '/home/jovyan/work/_Headline_generation/titles_tokenized/'
+    out_file = '/home/jovyan/work/_Headline_generation/pointer_summarizer/dataset.bin'
+    finished_files_dir = '/home/jovyan/work/_Headline_generation/pointer_summarizer/'
+    write_to_bin(article_dir, title_dir, out_file, finished_files_dir, makevocab=True)
