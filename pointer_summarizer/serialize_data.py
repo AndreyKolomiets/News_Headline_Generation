@@ -61,8 +61,8 @@ def write_to_bin(article_dir: str, title_dir: str, out_file: str, finished_files
 
             # Write to tf.Example
             tf_example = example_pb2.Example()
-            tf_example.features.feature['article'].bytes_list.value.extend([article])
-            tf_example.features.feature['abstract'].bytes_list.value.extend([title])
+            tf_example.features.feature['article'].bytes_list.value.extend([bytes(article, encoding='utf-8')])
+            tf_example.features.feature['abstract'].bytes_list.value.extend([bytes(title, encoding='utf-8')])
             tf_example_str = tf_example.SerializeToString()
             str_len = len(tf_example_str)
             writer.write(struct.pack('q', str_len))
@@ -88,6 +88,25 @@ def write_to_bin(article_dir: str, title_dir: str, out_file: str, finished_files
             for word, count in vocab_counter.most_common(VOCAB_SIZE):
                 writer.write(word + ' ' + str(count) + '\n')
         print("Finished writing vocab file")
+
+
+def chunk_file(in_file: str, chunks_dir: str):
+    reader = open(in_file, "rb")
+    chunk = 0
+    finished = False
+    while not finished:
+        chunk_fname = os.path.join(chunks_dir, 'dataset_%03d.bin' % chunk)  # new chunk
+        with open(chunk_fname, 'wb') as writer:
+            for _ in range(CHUNK_SIZE):
+                len_bytes = reader.read(8)
+                if not len_bytes:
+                    finished = True
+                    break
+                str_len = struct.unpack('q', len_bytes)[0]
+                example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+                writer.write(struct.pack('q', str_len))
+                writer.write(struct.pack('%ds' % str_len, example_str))
+            chunk += 1
 
 
 if __name__ == '__main__':
