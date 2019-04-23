@@ -1,7 +1,7 @@
 import os
 import struct
 import collections
-import numpy
+import numpy as np
 from tensorflow.core.example import example_pb2
 from multiprocessing import Pool
 import argparse
@@ -107,6 +107,33 @@ def chunk_file(in_file: str, chunks_dir: str):
                 writer.write(struct.pack('q', str_len))
                 writer.write(struct.pack('%ds' % str_len, example_str))
             chunk += 1
+
+
+def split_folder(train_path, test_path, val_path, test_share=0.3, val_share=0.2):
+    """
+    Раскидываем файлы по папкам, отдельные для валидации и для тестирования
+    :param train_path:
+    :param test_path:
+    :param val_path:
+    :param test_share:
+    :param val_share:
+    :return:
+    """
+    if not os.path.exists(test_path):
+        os.mkdir(test_path)
+    if not os.path.exists(val_path):
+        os.mkdir(val_path)
+    files = os.listdir(train_path)
+    n = len(files)
+    test_and_val_files = np.random.choice(files, size=int(n * (test_share + val_share)), replace=False)
+    test_files = np.random.choice(test_and_val_files, size=int(n * test_share))
+    val_files = set(test_and_val_files) - set(test_files)
+    for f in test_files:
+        os.rename(os.path.join(train_path, f),
+                  os.path.join(test_path, f))
+    for f in val_files:
+        os.rename(os.path.join(train_path, f),
+                  os.path.join(val_path, f))
 
 
 if __name__ == '__main__':
