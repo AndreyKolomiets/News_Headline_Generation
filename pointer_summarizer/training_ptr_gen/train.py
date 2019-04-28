@@ -6,7 +6,7 @@ import argparse
 
 import tensorflow as tf
 import torch
-from .model import Model
+from pointer_summarizer.training_ptr_gen.model import Model
 from torch.nn.utils import clip_grad_norm_
 
 from torch.optim import Adagrad
