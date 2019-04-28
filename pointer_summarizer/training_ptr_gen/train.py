@@ -21,10 +21,11 @@ use_cuda = config.use_gpu and torch.cuda.is_available()
 
 
 class Train(object):
-    def __init__(self):
+    def __init__(self, n_gpu=1):
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
+        # TODO: это выглядит как мега-костыль, надо с ним разобраться
         time.sleep(15)
 
         train_dir = os.path.join(config.log_root, 'train_%d' % (int(time.time())))
@@ -36,6 +37,7 @@ class Train(object):
             os.mkdir(self.model_dir)
 
         self.summary_writer = tf.summary.FileWriter(train_dir)
+        self.n_gpu = n_gpu
 
     def save_model(self, running_avg_loss, iter):
         state = {
@@ -50,7 +52,7 @@ class Train(object):
         torch.save(state, model_save_path)
 
     def setup_train(self, model_file_path=None):
-        self.model = Model(model_file_path)
+        self.model = Model(model_file_path, n_gpu=self.n_gpu)
 
         params = list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()) + \
                  list(self.model.reduce_state.parameters())
@@ -149,6 +151,7 @@ if __name__ == '__main__':
                         required=False,
                         default=None,
                         help="Model file for retraining (default: None).")
+    parser.add_argument('--n_gpu', type=int, default=1)
     args = parser.parse_args()
 
     train_processor = Train()

@@ -207,7 +207,7 @@ class Decoder(nn.Module):
 
 
 class Model(object):
-    def __init__(self, model_file_path=None, is_eval=False):
+    def __init__(self, model_file_path=None, is_eval=False, n_gpu=1):
         encoder = Encoder()
         decoder = Decoder()
         reduce_state = ReduceState()
@@ -223,10 +223,15 @@ class Model(object):
             encoder = encoder.cuda()
             decoder = decoder.cuda()
             reduce_state = reduce_state.cuda()
-
-        self.encoder = encoder
-        self.decoder = decoder
-        self.reduce_state = reduce_state
+        if n_gpu > 1:
+            device_ids = list(range(n_gpu))
+            self.encoder = nn.DataParallel(encoder, device_ids=device_ids)
+            self.decoder = nn.DataParallel(decoder, device_ids=device_ids)
+            self.reduce_state = nn.DataParallel(reduce_state, device_ids=device_ids)
+        else:
+            self.encoder = encoder
+            self.decoder = decoder
+            self.reduce_state = reduce_state
 
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
