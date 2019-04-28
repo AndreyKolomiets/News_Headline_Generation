@@ -3,11 +3,11 @@ import os
 root_dir = os.path.expanduser("~")
 
 # train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
-train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/chunked/train_*")
-eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
-decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
-vocab_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/vocab")
-log_root = os.path.join(root_dir, "ptr_nw/log")
+train_data_path = '/home/jovyan/work/_Headline_generation/dataset_chunks/'
+eval_data_path = '/home/jovyan/work/_Headline_generation/test/'
+decode_data_path = '/home/jovyan/work/_Headline_generation/val/'
+vocab_path = "/home/jovyan/work/_Headline_generation/pointer_summarizer/vocab"
+log_root = "log"
 
 # Hyperparameters
 hidden_dim = 256
