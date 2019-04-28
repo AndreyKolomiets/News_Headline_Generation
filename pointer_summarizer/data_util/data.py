@@ -8,8 +8,8 @@ import csv
 from tensorflow.core.example import example_pb2
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
-SENTENCE_START = '<s>'
-SENTENCE_END = '</s>'
+SENTENCE_START = b'<s>'
+SENTENCE_END = b'</s>'
 
 PAD_TOKEN = '[PAD]'  # This has a vocab id, which is used to pad the encoder input, decoder input and target sequence
 UNKNOWN_TOKEN = '[UNK]'  # This has a vocab id, which is used to represent out-of-vocabulary words
