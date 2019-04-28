@@ -126,7 +126,7 @@ def split_folder(train_path, test_path, val_path, test_share=0.3, val_share=0.2)
     files = os.listdir(train_path)
     n = len(files)
     test_and_val_files = np.random.choice(files, size=int(n * (test_share + val_share)), replace=False)
-    test_files = np.random.choice(test_and_val_files, size=int(n * test_share))
+    test_files = np.random.choice(test_and_val_files, size=int(n * test_share), replace=False)
     val_files = set(test_and_val_files) - set(test_files)
     for f in test_files:
         os.rename(os.path.join(train_path, f),
