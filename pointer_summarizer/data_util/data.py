@@ -1,6 +1,7 @@
 # Most of this file is copied form https://github.com/abisee/pointer-generator/blob/master/data.py
 
 import glob
+import os
 import random
 import struct
 import csv
@@ -80,7 +81,7 @@ class Vocab(object):
 
 def example_generator(data_path, single_pass):
     while True:
-        filelist = glob.glob(data_path)  # get the list of datafiles
+        filelist = os.listdir(data_path)  # get the list of datafiles
         assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
         if single_pass:
             filelist = sorted(filelist)
