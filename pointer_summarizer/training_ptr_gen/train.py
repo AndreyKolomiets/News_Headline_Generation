@@ -18,6 +18,8 @@ from pointer_summarizer.data_util.utils import calc_running_avg_loss
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch, get_output_from_batch
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
+SAVING_INTERVAL = 15000
+PRINT_INTERVAL = 1000
 
 
 class Train(object):
@@ -124,24 +126,24 @@ class Train(object):
         return loss.item()
 
     def trainIters(self, n_iters, model_file_path=None):
-        iter, running_avg_loss = self.setup_train(model_file_path)
+        itr, running_avg_loss = self.setup_train(model_file_path)
         start = time.time()
-        while iter < n_iters:
+        while itr < n_iters:
             batch = self.batcher.next_batch()
             loss = self.train_one_batch(batch)
 
-            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
-            iter += 1
+            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, itr)
+            itr += 1
 
-            if iter % 100 == 0:
+            if itr % 100 == 0:
                 self.summary_writer.flush()
-            print_interval = 1000
-            if iter % print_interval == 0:
-                print('steps %d, seconds for %d batch: %.2f , loss: %f' % (iter, print_interval,
+
+            if itr % PRINT_INTERVAL == 0:
+                print('steps %d, seconds for %d batch: %.2f , loss: %f' % (itr, PRINT_INTERVAL,
                                                                            time.time() - start, loss))
                 start = time.time()
-            if iter % 5000 == 0:
-                self.save_model(running_avg_loss, iter)
+            if itr % SAVING_INTERVAL == 0:
+                self.save_model(running_avg_loss, itr)
 
 
 if __name__ == '__main__':
@@ -154,5 +156,5 @@ if __name__ == '__main__':
     parser.add_argument('--n_gpu', type=int, default=1)
     args = parser.parse_args()
 
-    train_processor = Train()
+    train_processor = Train(n_gpu=args.n_gpu)
     train_processor.trainIters(config.max_iterations, args.model_file_path)

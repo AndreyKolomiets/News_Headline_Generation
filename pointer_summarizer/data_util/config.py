@@ -7,7 +7,7 @@ train_data_path = '/workspace/_Headline_generation/dataset_chunks/'
 eval_data_path = '/workpace/_Headline_generation/test/'
 decode_data_path = '/workspace/_Headline_generation/val/'
 vocab_path = "/workspace/_Headline_generation/vocab"
-log_root = "log"
+log_root = "/workspace/_Headline_generation/log_pointer_summarizer/log"
 
 # Hyperparameters
 hidden_dim = 256
