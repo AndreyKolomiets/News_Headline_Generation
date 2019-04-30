@@ -45,7 +45,7 @@ def rouge_log(results_dict, dir_to_write):
     print(log_str)
     results_file = os.path.join(dir_to_write, "ROUGE_results.txt")
     print("Writing final ROUGE results to %s..." % (results_file))
-    with open(results_file, "w") as f:
+    with open(results_file, "w", encoding='utf-8') as f:
         f.write(log_str)
 
 
@@ -82,10 +82,10 @@ def write_for_rouge(reference_sents, decoded_words, ex_index,
     ref_file = os.path.join(_rouge_ref_dir, "%06d_reference.txt" % ex_index)
     decoded_file = os.path.join(_rouge_dec_dir, "%06d_decoded.txt" % ex_index)
 
-    with open(ref_file, "w") as f:
+    with open(ref_file, "w", encoding='utf-8') as f:
         for idx, sent in enumerate(reference_sents):
             f.write(sent) if idx == len(reference_sents) - 1 else f.write(sent + "\n")
-    with open(decoded_file, "w") as f:
+    with open(decoded_file, "w", encoding='utf-8') as f:
         for idx, sent in enumerate(decoded_sents):
             f.write(sent) if idx == len(decoded_sents) - 1 else f.write(sent + "\n")
 
