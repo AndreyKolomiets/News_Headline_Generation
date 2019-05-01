@@ -45,24 +45,28 @@ def init_wt_unif(wt):
 
 
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, n_gpu=1):
         super(Encoder, self).__init__()
         self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
         init_wt_normal(self.embedding.weight)
-
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
+        if n_gpu > 1:
+            self.lstm = nn.DataParallel(self.lstm, device_ids=list(range(n_gpu)))
         init_lstm_wt(self.lstm)
 
         self.W_h = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2, bias=False)
+        if n_gpu > 1:
+            self.W_h = nn.DataParallel(self.W_h, device_ids=list(range(n_gpu)))
 
     # seq_lens should be in descending order
     def forward(self, input, seq_lens):
         embedded = self.embedding(input)
-        total_length = max(seq_lens)
+        # total_length = max(seq_lens)
         packed = pack_padded_sequence(embedded, seq_lens, batch_first=True)
         output, hidden = self.lstm(packed)
+        #  h dim = B x t_k x n
+        encoder_outputs, _ = pad_packed_sequence(output, batch_first=True)  # , total_length=total_length)
 
-        encoder_outputs, _ = pad_packed_sequence(output, batch_first=True, total_length=total_length)  # h dim = B x t_k x n
         encoder_outputs = encoder_outputs.contiguous()
 
         encoder_feature = encoder_outputs.view(-1, 2 * config.hidden_dim)  # B * t_k x 2*hidden_dim
@@ -208,7 +212,7 @@ class Decoder(nn.Module):
 
 class Model(object):
     def __init__(self, model_file_path=None, is_eval=False, n_gpu=1):
-        encoder = Encoder()
+        encoder = Encoder(n_gpu=n_gpu)
         decoder = Decoder()
         reduce_state = ReduceState()
 
@@ -225,13 +229,13 @@ class Model(object):
             reduce_state = reduce_state.cuda()
         if n_gpu > 1:
             device_ids = list(range(n_gpu))
-            self.encoder = nn.DataParallel(encoder, device_ids=device_ids)
             self.decoder = nn.DataParallel(decoder, device_ids=device_ids)
             self.reduce_state = nn.DataParallel(reduce_state, device_ids=device_ids)
         else:
-            self.encoder = encoder
+
             self.decoder = decoder
             self.reduce_state = reduce_state
+        self.encoder = encoder
 
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
