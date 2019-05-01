@@ -58,11 +58,11 @@ class Encoder(nn.Module):
     # seq_lens should be in descending order
     def forward(self, input, seq_lens):
         embedded = self.embedding(input)
-
+        total_length = max(seq_lens)
         packed = pack_padded_sequence(embedded, seq_lens, batch_first=True)
         output, hidden = self.lstm(packed)
 
-        encoder_outputs, _ = pad_packed_sequence(output, batch_first=True)  # h dim = B x t_k x n
+        encoder_outputs, _ = pad_packed_sequence(output, batch_first=True, total_length=total_length)  # h dim = B x t_k x n
         encoder_outputs = encoder_outputs.contiguous()
 
         encoder_feature = encoder_outputs.view(-1, 2 * config.hidden_dim)  # B * t_k x 2*hidden_dim
