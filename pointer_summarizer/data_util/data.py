@@ -81,7 +81,7 @@ class Vocab(object):
 
 def example_generator(data_path, single_pass):
     while True:
-        filelist = os.listdir(data_path)  # get the list of datafiles
+        filelist = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]  # get the list of datafiles
         assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
         if single_pass:
             filelist = sorted(filelist)
