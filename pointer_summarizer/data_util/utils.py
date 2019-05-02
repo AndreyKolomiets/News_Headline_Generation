@@ -30,6 +30,10 @@ def rouge_eval(ref_dir, dec_dir):
     return r.output_to_dict(rouge_results)
 
 
+def rouge_eval_custom(ref_dir, dec_dir):
+    pass
+
+
 def rouge_log(results_dict, dir_to_write):
     log_str = ""
     for x in ["1", "2", "l"]:
