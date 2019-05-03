@@ -99,7 +99,7 @@ class BeamSearch(object):
                 decoded_words = decoded_words
             # Несмотря на отличный от единицы batch_size, в режиме decode тексты выплевываются по одному.
             original_abstract_sents = batch.original_abstracts_sents[0]
-            ref.append(original_abstract_sents)
+            ref.append(original_abstract_sents[0])
             decoded.append(' '.join(decoded_words))
 
             # write_for_rouge(original_abstract_sents, decoded_words, counter,
