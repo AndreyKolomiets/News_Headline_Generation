@@ -23,7 +23,7 @@ from pointer_summarizer.data_util.utils import write_for_rouge, rouge_eval, roug
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_name', type=str)
+parser.add_argument('--model_name')
 parser.add_argument('--device_id', type=int, default=0)
 args = parser.parse_args()
 
