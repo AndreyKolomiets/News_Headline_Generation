@@ -211,7 +211,7 @@ class Decoder(nn.Module):
 
 
 class Model(object):
-    def __init__(self, model_file_path=None, is_eval=False, n_gpu=1):
+    def __init__(self, model_file_path=None, is_eval=False, n_gpu=1, device_id=0):
         encoder = Encoder(n_gpu=1)  # Здесь пока костыль, не параллелится никак
         decoder = Decoder()
         reduce_state = ReduceState()
@@ -224,9 +224,14 @@ class Model(object):
             reduce_state = reduce_state.eval()
 
         if use_cuda:
-            encoder = encoder.cuda()
-            decoder = decoder.cuda()
-            reduce_state = reduce_state.cuda()
+            if n_gpu == 1:
+                encoder = encoder.cuda(device=device_id)
+                decoder = decoder.cuda(device=device_id)
+                reduce_state = reduce_state.cuda(device=device_id)
+            else:
+                encoder = encoder.cuda()
+                decoder = decoder.cuda()
+                reduce_state = reduce_state.cuda()
         if n_gpu > 1:
             device_ids = list(range(n_gpu))
             self.decoder = nn.DataParallel(decoder, device_ids=device_ids)

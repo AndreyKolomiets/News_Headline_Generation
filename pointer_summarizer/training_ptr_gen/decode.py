@@ -12,6 +12,8 @@ import time
 
 import torch
 from torch.autograd import Variable
+import argparse
+from rouge import Rouge
 
 from pointer_summarizer.data_util.batcher import Batcher
 from pointer_summarizer.data_util.data import Vocab
@@ -48,7 +50,7 @@ class Beam(object):
 
 
 class BeamSearch(object):
-    def __init__(self, model_file_path):
+    def __init__(self, model_file_path, device_id=0):
         model_name = os.path.basename(model_file_path)
         self._decode_dir = os.path.join(config.log_root, 'decode_%s' % (model_name))
         self._rouge_ref_dir = os.path.join(self._decode_dir, 'rouge_ref')
@@ -62,15 +64,18 @@ class BeamSearch(object):
                                batch_size=config.beam_size, single_pass=True)
         time.sleep(15)
 
-        self.model = Model(model_file_path, is_eval=True)
+        self.model = Model(model_file_path, is_eval=True, device_id=device_id)
 
     def sort_beams(self, beams):
         return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
 
     def decode(self):
         start = time.time()
+        scorer = Rouge()
         counter = 0
         batch = self.batcher.next_batch()
+        decoded = []
+        ref = []
         while batch is not None:
             # Run beam search to get best Hypothesis
             best_summary = self.beam_search(batch)
@@ -86,11 +91,13 @@ class BeamSearch(object):
                 decoded_words = decoded_words[:fst_stop_idx]
             except ValueError:
                 decoded_words = decoded_words
-
+            # Несмотря на отличный от единицы batch_size, в режиме decode тексты выплевываются по одному.
             original_abstract_sents = batch.original_abstracts_sents[0]
+            ref.append(original_abstract_sents)
+            decoded.append(decoded_words)
 
-            write_for_rouge(original_abstract_sents, decoded_words, counter,
-                            self._rouge_ref_dir, self._rouge_dec_dir)
+            # write_for_rouge(original_abstract_sents, decoded_words, counter,
+            #                self._rouge_ref_dir, self._rouge_dec_dir)
             counter += 1
             if counter % 1000 == 0:
                 print('%d example in %d sec' % (counter, time.time() - start))
@@ -100,8 +107,10 @@ class BeamSearch(object):
 
         print("Decoder has finished reading dataset for single_pass.")
         print("Now starting ROUGE eval...")
-        results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
-        rouge_log(results_dict, self._decode_dir)
+        # results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
+        # rouge_log(results_dict, self._decode_dir)
+        score = scorer.get_scores(hyps=decoded, refs=ref, avg=True)
+        print('ROUGE scores: ', score)
 
     def beam_search(self, batch):
         # batch should have only one example
@@ -202,6 +211,11 @@ class BeamSearch(object):
 
 
 if __name__ == '__main__':
-    model_filename = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_name', type=str)
+    parser.add_argument('--device_id', type=int, default=0, required=False)
+    args = parser.parse_args()
+    model_filename = args.model_name # sys.argv[1]
+    device_ids = args.device_ids
     beam_Search_processor = BeamSearch(model_filename)
     beam_Search_processor.decode()
