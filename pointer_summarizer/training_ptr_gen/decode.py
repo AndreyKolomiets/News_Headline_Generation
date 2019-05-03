@@ -12,7 +12,7 @@ import time
 
 import torch
 from torch.autograd import Variable
-import argparse
+# import argparse
 from rouge import Rouge
 
 from pointer_summarizer.data_util.batcher import Batcher
@@ -22,10 +22,10 @@ from pointer_summarizer.training_ptr_gen.model import Model
 from pointer_summarizer.data_util.utils import write_for_rouge, rouge_eval, rouge_log
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--model_name')
-parser.add_argument('--device_id', type=int, default=0)
-args = parser.parse_args()
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--model_name')
+# parser.add_argument('--device_id', type=int, default=0)
+# args = parser.parse_args()
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -217,7 +217,7 @@ class BeamSearch(object):
 
 if __name__ == '__main__':
 
-    # model_filename = args.model_name  # sys.argv[1]
+    model_filename = sys.argv[1]
     # device_id = args.device_id
-    beam_Search_processor = BeamSearch(args.model_name, args.device_id)
+    beam_Search_processor = BeamSearch(model_filename)
     beam_Search_processor.decode()
