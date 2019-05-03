@@ -217,7 +217,7 @@ class BeamSearch(object):
 
 if __name__ == '__main__':
 
-    model_filename = args.model_name  # sys.argv[1]
-    device_ids = args.device_id
-    beam_Search_processor = BeamSearch(model_filename)
+    # model_filename = args.model_name  # sys.argv[1]
+    # device_id = args.device_id
+    beam_Search_processor = BeamSearch(args.model_name, args.device_id)
     beam_Search_processor.decode()
