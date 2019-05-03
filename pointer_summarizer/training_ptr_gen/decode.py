@@ -14,6 +14,7 @@ import torch
 from torch.autograd import Variable
 import argparse
 from rouge import Rouge
+import pickle
 
 from pointer_summarizer.data_util.batcher import Batcher
 from pointer_summarizer.data_util.data import Vocab
@@ -99,7 +100,7 @@ class BeamSearch(object):
             # Несмотря на отличный от единицы batch_size, в режиме decode тексты выплевываются по одному.
             original_abstract_sents = batch.original_abstracts_sents[0]
             ref.append(original_abstract_sents)
-            decoded.append(decoded_words)
+            decoded.append(decoded_words[0])
 
             # write_for_rouge(original_abstract_sents, decoded_words, counter,
             #                self._rouge_ref_dir, self._rouge_dec_dir)
@@ -114,6 +115,8 @@ class BeamSearch(object):
         print("Now starting ROUGE eval...")
         # results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
         # rouge_log(results_dict, self._decode_dir)
+        with open('decoded_real.pkl', 'wb') as f:
+            pickle.dump((decoded, ref), f)
         score = scorer.get_scores(hyps=decoded, refs=ref, avg=True)
         print('ROUGE scores: ', score)
 
