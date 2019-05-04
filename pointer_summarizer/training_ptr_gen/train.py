@@ -29,8 +29,10 @@ class Train(object):
                                batch_size=config.batch_size, single_pass=False)
         # TODO: это выглядит как мега-костыль, надо с ним разобраться
         time.sleep(15)
-
-        train_dir = os.path.join(config.log_root, 'train_%d' % (int(time.time())))
+        if args.logdir is None:
+            train_dir = os.path.join(config.log_root, 'train_%d' % (int(time.time())))
+        else:
+            train_dir = os.path.join(config.log_root, 'train_%s' % args.logdir)
         if not os.path.exists(train_dir):
             os.mkdir(train_dir)
 
@@ -50,7 +52,10 @@ class Train(object):
             'optimizer': self.optimizer.state_dict(),
             'current_loss': running_avg_loss
         }
-        model_save_path = os.path.join(self.model_dir, 'model_%d_%d' % (iter, int(time.time())))
+        if args.logdir is None:
+            model_save_path = os.path.join(self.model_dir, 'model_%d_%d' % (iter, int(time.time())))
+        else:
+            model_save_path = os.path.join(self.model_dir, 'model_%d_%s' % (iter, args.logdir))
         torch.save(state, model_save_path)
 
     def setup_train(self, model_file_path=None):
@@ -154,6 +159,7 @@ if __name__ == '__main__':
                         default=None,
                         help="Model file for retraining (default: None).")
     parser.add_argument('--n_gpu', type=int, default=1)
+    parser.add_argument('--logdir', type=str, default=None)
     args = parser.parse_args()
 
     train_processor = Train(n_gpu=args.n_gpu)

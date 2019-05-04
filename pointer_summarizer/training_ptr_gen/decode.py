@@ -26,6 +26,7 @@ from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name')
 parser.add_argument('--device_id', type=int, default=0)
+parser.add_argument('--logdir', type=str, default=None)
 args = parser.parse_args()
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
