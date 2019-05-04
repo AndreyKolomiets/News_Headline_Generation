@@ -27,7 +27,7 @@ max_grad_norm = 2.0
 
 pointer_gen = True
 is_coverage = True
-cov_loss_wt = 1.0
+cov_loss_wt = 0.2
 
 eps = 1e-12
 max_iterations = 500000
