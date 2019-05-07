@@ -4,6 +4,7 @@ import queue
 import time
 from random import shuffle
 from threading import Thread
+from typing import List
 
 import numpy as np
 import tensorflow as tf
@@ -86,16 +87,16 @@ class Example(object):
 
 
 class Batch(object):
-    def __init__(self, example_list, vocab, batch_size):
+    def __init__(self, example_list: List[Example], vocab, batch_size):
         self.batch_size = batch_size
         self.pad_id = vocab.word2id(data.PAD_TOKEN)  # id of the PAD token used to pad sequences
         self.init_encoder_seq(example_list)  # initialize the input to the encoder
         self.init_decoder_seq(example_list)  # initialize the input and targets for the decoder
         self.store_orig_strings(example_list)  # store the original strings
 
-    def init_encoder_seq(self, example_list):
+    def init_encoder_seq(self, example_list: List[Example]):
         # Determine the maximum length of the encoder input sequence in this batch
-        max_enc_seq_len = max([ex.enc_len for ex in example_list])
+        max_enc_seq_len = max(ex.enc_len for ex in example_list)
 
         # Pad the encoder input sequences up to the length of the longest sequence
         for ex in example_list:
@@ -125,7 +126,7 @@ class Batch(object):
             for i, ex in enumerate(example_list):
                 self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
 
-    def init_decoder_seq(self, example_list):
+    def init_decoder_seq(self, example_list: List[Example]):
         # Pad the inputs and targets
         for ex in example_list:
             ex.pad_decoder_inp_targ(config.max_dec_steps, self.pad_id)
@@ -205,6 +206,7 @@ class Batcher(object):
         batch = self._batch_queue.get()  # get the next Batch
         return batch
 
+    # TODO: попробовать здесь грузить все сразу в память
     def fill_example_queue(self):
         input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass))
 
