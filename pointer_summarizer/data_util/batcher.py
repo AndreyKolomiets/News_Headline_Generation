@@ -99,6 +99,8 @@ class Batch(object):
         self.init_encoder_seq(example_list)  # initialize the input to the encoder
         self.init_decoder_seq(example_list)  # initialize the input and targets for the decoder
         self.store_orig_strings(example_list)  # store the original strings
+        if np.random.random() > 0.999:
+            print(self.enc_batch)
 
     def init_encoder_seq(self, example_list: List[Example]):
         # Determine the maximum length of the encoder input sequence in this batch
