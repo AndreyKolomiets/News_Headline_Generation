@@ -24,7 +24,7 @@ class Example(object):
         stop_decoding = vocab.word2id(data.STOP_DECODING)
 
         # Process the article
-        article_words = article.split()
+        article_words = article.decode('utf-8').split()
         if len(article_words) > config.max_enc_steps:
             article_words = article_words[:config.max_enc_steps]
         # Бывает актуально для первых предложений
@@ -33,16 +33,21 @@ class Example(object):
         self.enc_len = len(article_words)  # store the length after truncation but before padding
         self.enc_input = [vocab.word2id(w) for w in
                           article_words]  # list of word ids; OOVs are represented by the id for UNK token
-
+        # if np.random.random() > 0.999:
+        #     print([(_, _ in vocab._word_to_id) for _ in article_words])
+        #     print('encoder input:', self.enc_input)
         # Process the abstract
         abstract = ' '.join(abstract_sentences)  # string
         abstract_words = abstract.split()  # list of strings
         abs_ids = [vocab.word2id(w) for w in
                    abstract_words]  # list of word ids; OOVs are represented by the id for UNK token
-
+        # if np.random.random() > 0.999:
+        #     print('abs_ids', abs_ids)
         # Get the decoder input sequence and target sequence
         self.dec_input, self.target = self.get_dec_inp_targ_seqs(abs_ids, config.max_dec_steps, start_decoding,
                                                                  stop_decoding)
+        # if np.random.random() > 0.999:
+        #     print('decoder_input:', self.dec_input)
         self.dec_len = len(self.dec_input)
 
         # If using pointer-generator mode, we need to store some extra info
@@ -99,8 +104,6 @@ class Batch(object):
         self.init_encoder_seq(example_list)  # initialize the input to the encoder
         self.init_decoder_seq(example_list)  # initialize the input and targets for the decoder
         self.store_orig_strings(example_list)  # store the original strings
-        if np.random.random() > 0.999:
-            print(self.enc_batch)
 
     def init_encoder_seq(self, example_list: List[Example]):
         # Determine the maximum length of the encoder input sequence in this batch
