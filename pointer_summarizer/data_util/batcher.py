@@ -76,14 +76,17 @@ class Example(object):
         return inp, target
 
     def pad_decoder_inp_targ(self, max_len, pad_id):
-        while len(self.dec_input) < max_len:
-            self.dec_input.append(pad_id)
-        while len(self.target) < max_len:
-            self.target.append(pad_id)
+        if len(self.dec_input) < max_len:
+            n_add = max_len - len(self.dec_input)
+            self.dec_input.extend(pad_id for _ in range(n_add))
+        if len(self.target) < max_len:
+            n_add = max_len - len(self.target)
+            self.target.extend(pad_id for _ in range(n_add))
 
     def pad_encoder_input(self, max_len, pad_id):
-        while len(self.enc_input) < max_len:
-            self.enc_input.append(pad_id)
+        if len(self.enc_input) < max_len:
+            n_add = max_len - len(self.enc_input)
+            self.enc_input.extend(pad_id for _ in range(n_add))
         if config.pointer_gen:
             while len(self.enc_input_extend_vocab) < max_len:
                 self.enc_input_extend_vocab.append(pad_id)

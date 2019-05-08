@@ -212,6 +212,8 @@ class Decoder(nn.Module):
 
 class Model(object):
     def __init__(self, model_file_path=None, is_eval=False, n_gpu=1, device_id=0):
+        if device_id is None:
+            device_id = 0
         encoder = Encoder(n_gpu=1)  # Здесь пока костыль, не параллелится никак
         decoder = Decoder()
         reduce_state = ReduceState()
