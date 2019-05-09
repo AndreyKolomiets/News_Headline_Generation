@@ -27,6 +27,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model_name')
 parser.add_argument('--device_id', type=int, default=0)
 parser.add_argument('--logdir', type=str, default=None)
+parser.add_argument('--save_interval', type=int, default=1000)
 args = parser.parse_args()
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
@@ -109,15 +110,18 @@ class BeamSearch(object):
             if counter % 1000 == 0:
                 print('%d example in %d sec' % (counter, time.time() - start))
                 start = time.time()
+            if counter % args.save_interval == 0:
+                with open(self._decode_dir + '/' + 'decoded_real.pkl', 'wb') as f:
+                    pickle.dump((decoded, ref), f)
 
             batch = self.batcher.next_batch()
-
+        with open('decoded_real.pkl', 'wb') as f:
+            pickle.dump((decoded, ref), f)
         print("Decoder has finished reading dataset for single_pass.")
         print("Now starting ROUGE eval...")
         # results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
         # rouge_log(results_dict, self._decode_dir)
-        with open('decoded_real.pkl', 'wb') as f:
-            pickle.dump((decoded, ref), f)
+
         score = scorer.get_scores(hyps=decoded, refs=ref, avg=True)
         print('ROUGE scores: ', score)
 
