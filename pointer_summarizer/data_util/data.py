@@ -24,7 +24,8 @@ STOP_DECODING = '[STOP]'  # This has a vocab id, which is used at the end of unt
 def create_bpe(path_to_data, path_to_encoder):
     """
     Создаем BPE для текстов и заголовков
-    :param path:
+    :param path_to_encoder: путь для сохранения в pickle словаря
+    :param path_to_data: путь к сериализованным в  pickle данным (очищенные от html статьи и заголовки)
     :return:
     """
     with open(path_to_data, 'rb') as f:
@@ -46,8 +47,6 @@ class BPEVocab:
         with open(path, 'rb') as f:
             bpe_encoder = pickle.load(f)
         return bpe_encoder
-
-
 
 
 class Vocab(object):

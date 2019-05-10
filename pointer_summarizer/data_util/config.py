@@ -7,7 +7,9 @@ train_data_path = '/workspace/_Headline_generation/dataset_chunks_1st_sent/'
 eval_data_path = '/workspace/_Headline_generation/test_1st_sent/'
 decode_data_path = '/workspace/_Headline_generation/val_1st_sent/'
 vocab_path = "/workspace/_Headline_generation/vocab_1st_sent"
+bpe_vocab_path = '/workspace/_Headline_generation/'
 log_root = "/workspace/_Headline_generation/log_pointer_summarizer/log"
+use_bpe = True
 
 # Hyperparameters
 hidden_dim = 256
