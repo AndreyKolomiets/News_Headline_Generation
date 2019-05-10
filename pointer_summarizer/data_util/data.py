@@ -21,6 +21,7 @@ START_DECODING = '[START]'  # This has a vocab id, which is used at the start of
 STOP_DECODING = '[STOP]'  # This has a vocab id, which is used at the end of untruncated target sequences
 
 
+# TODO: здесь мб потребуется докинуть токенов из списка выше
 def create_bpe(path_to_data, path_to_encoder):
     """
     Создаем BPE для текстов и заголовков
@@ -127,6 +128,22 @@ def example_generator(data_path, single_pass):
         if single_pass:
             print("example_generator completed reading all datafiles. No more data.")
             break
+
+
+# TODO: это может вообще не потребоваться при использовании BPE
+def article2ids_bpe(article: str, vocab: bpe.Encoder):
+    ids = []
+    oovs = []
+    unk_id = vocab.bpe_vocab[UNKNOWN_TOKEN]  # TODO: не факт что будет именно в этом словаре
+    for i in vocab.transform([article]):
+        if i == unk_id:  # If w is OOV
+            if w not in oovs:  # Add to list of OOVs
+                oovs.append(w)
+            oov_num = oovs.index(w)  # This is 0 for the first article OOV, 1 for the second article OOV...
+            ids.append(vocab.size() + oov_num)  # This is e.g. 50000 for the first article OOV, 50001 for the second...
+        else:
+            ids.append(i)
+    return ids, oovs
 
 
 def article2ids(article_words, vocab):

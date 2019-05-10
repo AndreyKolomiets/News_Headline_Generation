@@ -22,8 +22,8 @@ class Example(object):
 
     def __init__(self, article: bytes, abstract_sentences: List[str], vocab: bpe.Encoder):
         # Get ids of special tokens
-        start_decoding = vocab.word2id(data.START_DECODING)
-        stop_decoding = vocab.word2id(data.STOP_DECODING)
+        start_decoding = vocab.word_vocab[data.START_DECODING]
+        stop_decoding = vocab.word_vocab[data.STOP_DECODING]
 
         # Process the article
         article_tokens = vocab.transform([article.decode('utf-8')])[0]
@@ -97,9 +97,9 @@ class Example(object):
 
 
 class Batch(object):
-    def __init__(self, example_list: List[Example], vocab, batch_size):
+    def __init__(self, example_list: List[Example], vocab: bpe.Encoder, batch_size):
         self.batch_size = batch_size
-        self.pad_id = vocab.word2id(data.PAD_TOKEN)  # id of the PAD token used to pad sequences
+        self.pad_id = vocab.word_vocab[data.PAD_TOKEN]  # id of the PAD token used to pad sequences
         self.init_encoder_seq(example_list)  # initialize the input to the encoder
         self.init_decoder_seq(example_list)  # initialize the input and targets for the decoder
         self.store_orig_strings(example_list)  # store the original strings
@@ -164,7 +164,7 @@ class Batch(object):
 class Batcher(object):
     BATCH_QUEUE_MAX = 100  # max number of batches the batch_queue can hold
 
-    def __init__(self, data_path, vocab, mode, batch_size, single_pass):
+    def __init__(self, data_path, vocab: bpe.Encoder, mode, batch_size, single_pass):
         self._data_path = data_path
         self._vocab = vocab
         self._single_pass = single_pass

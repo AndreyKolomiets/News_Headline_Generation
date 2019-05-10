@@ -3,6 +3,7 @@ from __future__ import unicode_literals, print_function, division
 import os
 import time
 import argparse
+import pickle
 
 import tensorflow as tf
 import torch
@@ -12,7 +13,10 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import Adagrad
 
 from pointer_summarizer.data_util import config
-from pointer_summarizer.data_util.batcher import Batcher
+if config.use_bpe:
+    from pointer_summarizer.data_util.batcher_bpe import Batcher
+else:
+    from pointer_summarizer.data_util.batcher import Batcher
 from pointer_summarizer.data_util.data import Vocab
 from pointer_summarizer.data_util.utils import calc_running_avg_loss
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch, get_output_from_batch
@@ -26,7 +30,11 @@ class Train(object):
     def __init__(self, n_gpu=1, device_id=None):
         if (device_id is not None) and (n_gpu > 1):
             raise ValueError
-        self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        if config.use_bpe:
+            with open(config.bpe_vocab_path, 'rb') as f:
+                self.vocab = pickle.load(f)
+        else:
+            self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
         # TODO: это выглядит как мега-костыль, надо с ним разобраться
