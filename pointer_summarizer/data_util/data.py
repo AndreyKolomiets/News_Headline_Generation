@@ -5,7 +5,11 @@ import os
 import random
 import struct
 import csv
+import pickle
 from tensorflow.core.example import example_pb2
+from nltk.tokenize import wordpunct_tokenize
+from itertools import chain
+import bpe
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = b'<s>'
@@ -17,7 +21,33 @@ START_DECODING = '[START]'  # This has a vocab id, which is used at the start of
 STOP_DECODING = '[STOP]'  # This has a vocab id, which is used at the end of untruncated target sequences
 
 
+def create_bpe(path_to_data, path_to_encoder):
+    """
+    Создаем BPE для текстов и заголовков
+    :param path:
+    :return:
+    """
+    with open(path_to_data, 'rb') as f:
+        parsed, titles = pickle.load(f)
+    encoder = bpe.Encoder()
+    encoder.unmute()
+    encoder.fit(chain(*(wordpunct_tokenize(_) for _ in chain(parsed, titles))))
+    with open(path_to_encoder, 'wb') as f:
+        pickle.dump(encoder, f)
+
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
+
+
+class BPEVocab:
+    def __init__(self, path_to_encoder):
+        self.bpe_encoder = self.load_vocab(path_to_encoder)
+
+    def load_vocab(self, path: str) -> bpe.Encoder:
+        with open(path, 'rb') as f:
+            bpe_encoder = pickle.load(f)
+        return bpe_encoder
+
+
 
 
 class Vocab(object):
