@@ -18,6 +18,7 @@ import bpe
 random.seed(1234)
 
 
+# TODO: BPE возвращает итераторы, а не списки, могут быть ошибки
 class Example(object):
 
     def __init__(self, article: bytes, abstract_sentences: List[str], vocab: bpe.Encoder):

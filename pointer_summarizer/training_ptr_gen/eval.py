@@ -3,12 +3,16 @@ from __future__ import unicode_literals, print_function, division
 import os
 import time
 import sys
+import pickle
 
 import tensorflow as tf
 import torch
 
 from pointer_summarizer.data_util import config
-from pointer_summarizer.data_util.batcher import Batcher
+if config.use_bpe:
+    from pointer_summarizer.data_util.batcher_bpe import Batcher
+else:
+    from pointer_summarizer.data_util.batcher import Batcher
 from pointer_summarizer.data_util.data import Vocab
 
 from pointer_summarizer.data_util.utils import calc_running_avg_loss
@@ -20,7 +24,11 @@ use_cuda = config.use_gpu and torch.cuda.is_available()
 
 class Evaluate(object):
     def __init__(self, model_file_path):
-        self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        if config.use_bpe:
+            with open(config.bpe_vocab_path, 'rb') as f:
+                self.vocab = pickle.load(f)
+        else:
+            self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.eval_data_path, self.vocab, mode='eval',
                                batch_size=config.batch_size, single_pass=True)
         time.sleep(15)
