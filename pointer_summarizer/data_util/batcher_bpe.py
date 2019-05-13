@@ -27,7 +27,7 @@ class Example(object):
         stop_decoding = vocab.word_vocab[data.STOP_DECODING]
 
         # Process the article
-        article_tokens = vocab.transform([article.decode('utf-8')])[0]
+        article_tokens = next(vocab.transform([article.decode('utf-8')]))
         if len(article_tokens) > config.max_enc_steps:
             article_tokens = article_tokens[:config.max_enc_steps]
         # Бывает актуально для первых предложений
@@ -42,7 +42,9 @@ class Example(object):
         # Process the abstract
         abstract = ' '.join(abstract_sentences)  # string
         abstract_words = abstract.split()  # list of strings
-        abs_ids = list(chain(vocab.transform(abstract_sentences)))  # list of word ids; OOVs are represented by the id for UNK token
+        # list of word ids; OOVs are represented by the id for UNK token
+        abs_ids = list(chain(vocab.transform(abstract_sentences)))[0]
+        # print(abs_ids)
         # Get the decoder input sequence and target sequence
         self.dec_input, self.target = self.get_dec_inp_targ_seqs(abs_ids, config.max_dec_steps, start_decoding,
                                                                  stop_decoding)
@@ -114,9 +116,10 @@ class Batch(object):
             ex.pad_encoder_input(max_enc_seq_len, self.pad_id)
 
         # Initialize the numpy arrays
-        # Note: our enc_batch can have different length (second dimension) for each batch because we use dynamic_rnn for the encoder.
+        # Note: our enc_batch can have different length (second dimension)
+        # for each batch because we use dynamic_rnn for the encoder.
         self.enc_batch = np.zeros((self.batch_size, max_enc_seq_len), dtype=np.int32)
-        self.enc_lens = np.zeros((self.batch_size), dtype=np.int32)
+        self.enc_lens = np.zeros(self.batch_size, dtype=np.int32)
         self.enc_padding_mask = np.zeros((self.batch_size, max_enc_seq_len), dtype=np.float32)
 
         # Fill in the numpy arrays
@@ -217,7 +220,6 @@ class Batcher(object):
         batch = self._batch_queue.get()  # get the next Batch
         return batch
 
-    # TODO: попробовать здесь грузить все сразу в память
     def fill_example_queue(self):
         input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass))
 

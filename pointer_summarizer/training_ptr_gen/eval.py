@@ -13,7 +13,7 @@ if config.use_bpe:
     from pointer_summarizer.data_util.batcher_bpe import Batcher
 else:
     from pointer_summarizer.data_util.batcher import Batcher
-from pointer_summarizer.data_util.data import Vocab
+from pointer_summarizer.data_util.data import Vocab, make_bpe_vocab
 
 from pointer_summarizer.data_util.utils import calc_running_avg_loss
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch, get_output_from_batch
@@ -25,8 +25,7 @@ use_cuda = config.use_gpu and torch.cuda.is_available()
 class Evaluate(object):
     def __init__(self, model_file_path):
         if config.use_bpe:
-            with open(config.bpe_vocab_path, 'rb') as f:
-                self.vocab = pickle.load(f)
+            self.vocab = make_bpe_vocab(config.bpe_vocab_path)
         else:
             self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.eval_data_path, self.vocab, mode='eval',

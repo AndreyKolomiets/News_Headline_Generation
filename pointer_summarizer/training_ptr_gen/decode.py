@@ -73,10 +73,11 @@ class BeamSearch(object):
                 os.mkdir(p)
 
         if config.use_bpe:
-            with open(config.bpe_vocab_path, 'rb') as f:
-                self.vocab = pickle.load(f)
+            self.vocab = data.make_bpe_vocab(config.bpe_vocab_path)
+            self.STOP_DECODING = self.vocab.word_vocab[data.STOP_DECODING]
         else:
             self.vocab = Vocab(config.vocab_path, config.vocab_size)
+            self.STOP_DECODING = self.vocab.word2id(data.STOP_DECODING)
         self.batcher = Batcher(config.decode_data_path, self.vocab, mode='decode',
                                batch_size=config.beam_size, single_pass=True)
         time.sleep(15)
@@ -161,11 +162,8 @@ class BeamSearch(object):
         steps = 0
         while steps < config.max_dec_steps and len(results) < config.beam_size:
             latest_tokens = [h.latest_token for h in beams]
-            # TODO: смысл этого пока не очень понятен
-            if isinstance(self.vocab, bpe.Encoder):
-                latest_tokens = [t if t < self.vocab.size() else self.vocab.word2id(data.UNKNOWN_TOKEN) \
-                                 for t in latest_tokens]
-            else:
+            # Для обычного словаря токены с индексами больше размера словаря являтся неизвестными
+            if not config.use_bpe:
                 latest_tokens = [t if t < self.vocab.size() else self.vocab.word2id(data.UNKNOWN_TOKEN) \
                                  for t in latest_tokens]
             y_t_1 = Variable(torch.LongTensor(latest_tokens))
@@ -223,8 +221,7 @@ class BeamSearch(object):
 
             beams = []
             for h in self.sort_beams(all_beams):
-                # TODO: здесь тоже поменять, желательно разово закодив id в __init__
-                if h.latest_token == self.vocab.word2id(data.STOP_DECODING):
+                if h.latest_token == self.STOP_DECODING:
                     if steps >= config.min_dec_steps:
                         results.append(h)
                 else:
