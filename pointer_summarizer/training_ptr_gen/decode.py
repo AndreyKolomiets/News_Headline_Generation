@@ -30,7 +30,6 @@ from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name')
-parser.add_argument('--device_id', type=int, default=0)
 parser.add_argument('--logdir', type=str, default=None)
 parser.add_argument('--save_interval', type=int, default=1000)
 args = parser.parse_args()
@@ -63,7 +62,7 @@ class Beam(object):
 
 
 class BeamSearch(object):
-    def __init__(self, model_file_path, device_id=0):
+    def __init__(self, model_file_path):
         model_name = os.path.basename(model_file_path)
         self._decode_dir = os.path.join(config.log_root, 'decode_%s' % (model_name))
         self._rouge_ref_dir = os.path.join(self._decode_dir, 'rouge_ref')
@@ -82,7 +81,7 @@ class BeamSearch(object):
                                batch_size=config.beam_size, single_pass=True)
         time.sleep(15)
 
-        self.model = Model(model_file_path, is_eval=True, device_id=device_id)
+        self.model = Model(model_file_path, is_eval=True)
 
     def sort_beams(self, beams):
         return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
@@ -128,7 +127,7 @@ class BeamSearch(object):
                     pickle.dump((decoded, ref), f)
 
             batch = self.batcher.next_batch()
-        with open('decoded_real.pkl', 'wb') as f:
+        with open(self._decode_dir + '/' + 'decoded_real.pkl', 'wb') as f:
             pickle.dump((decoded, ref), f)
         print("Decoder has finished reading dataset for single_pass.")
         print("Now starting ROUGE eval...")
@@ -242,6 +241,5 @@ class BeamSearch(object):
 if __name__ == '__main__':
 
     # model_filename = sys.argv[1]
-    # device_id = args.device_id
-    beam_Search_processor = BeamSearch(args.model_name, args.device_id)
+    beam_Search_processor = BeamSearch(args.model_name)
     beam_Search_processor.decode()

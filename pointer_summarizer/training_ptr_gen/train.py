@@ -27,9 +27,7 @@ PRINT_INTERVAL = 1000
 
 
 class Train(object):
-    def __init__(self, n_gpu=1, device_id=None):
-        if (device_id is not None) and (n_gpu > 1):
-            raise ValueError
+    def __init__(self, n_gpu=1):
         if config.use_bpe:
             self.vocab = make_bpe_vocab(config.bpe_vocab_path)
         else:
@@ -51,7 +49,6 @@ class Train(object):
 
         self.summary_writer = tf.summary.FileWriter(train_dir)
         self.n_gpu = n_gpu
-        self.device_id = device_id
 
     def save_model(self, running_avg_loss, iter):
         state = {
@@ -69,7 +66,7 @@ class Train(object):
         torch.save(state, model_save_path)
 
     def setup_train(self, model_file_path=None):
-        self.model = Model(model_file_path, n_gpu=self.n_gpu, device_id=self.device_id)
+        self.model = Model(model_file_path, n_gpu=self.n_gpu)
 
         params = list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()) + \
                  list(self.model.reduce_state.parameters())
@@ -170,8 +167,7 @@ if __name__ == '__main__':
                         help="Model file for retraining (default: None).")
     parser.add_argument('--n_gpu', type=int, default=1)
     parser.add_argument('--logdir', type=str, default=None)
-    parser.add_argument('--device_id', type=int, default=None)
     args = parser.parse_args()
 
-    train_processor = Train(n_gpu=args.n_gpu, device_id=args.device_id)
+    train_processor = Train(n_gpu=args.n_gpu)
     train_processor.trainIters(config.max_iterations, args.model_file_path)
