@@ -86,6 +86,8 @@ class BeamSearch(object):
     def sort_beams(self, beams):
         return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
 
+    # TODO: сейчас GPU используется едва ли на четверть,
+    #  поэтому нужно пробовать прогонять батчи побольше и потом декодировать
     def decode(self):
         start = time.time()
         scorer = Rouge()
@@ -100,7 +102,8 @@ class BeamSearch(object):
             # Extract the output ids from the hypothesis and convert back to words
             output_ids = [int(t) for t in best_summary.tokens[1:]]
             if config.use_bpe:
-                decoded_words = next(self.vocab.inverse_transform(output_ids)).split()
+                # print(output_ids)
+                decoded_words = next(self.vocab.inverse_transform([output_ids])).split()
             else:
                 decoded_words = data.outputids2words(output_ids, self.vocab,
                                                      (batch.art_oovs[0] if config.pointer_gen else None))

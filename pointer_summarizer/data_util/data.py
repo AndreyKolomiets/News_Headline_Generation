@@ -57,6 +57,7 @@ def make_bpe_vocab(path: str) -> bpe.Encoder:
     i = 0
     for w in [PAD_TOKEN, START_DECODING, STOP_DECODING]:
         bpe_encoder.word_vocab[w] = i + bpe_encoder.vocab_size
+        bpe_encoder.inverse_word_vocab[i + bpe_encoder.vocab_size] = w
         i += 1
     bpe_encoder.mute()
     return bpe_encoder
