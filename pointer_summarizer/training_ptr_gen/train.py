@@ -4,6 +4,8 @@ import os
 import time
 import argparse
 import pickle
+from numpy import random
+import numpy as np
 
 import tensorflow as tf
 import torch
@@ -14,12 +16,12 @@ from torch.optim import Adagrad
 
 from pointer_summarizer.data_util import config
 if config.use_bpe:
-    from pointer_summarizer.data_util.batcher_bpe import Batcher
+    from pointer_summarizer.data_util.batcher_bpe import Batcher, Batch
 else:
-    from pointer_summarizer.data_util.batcher import Batcher
+    from pointer_summarizer.data_util.batcher import Batcher, Batch
 from pointer_summarizer.data_util.data import Vocab, make_bpe_vocab
 from pointer_summarizer.data_util.utils import calc_running_avg_loss
-from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch, get_output_from_batch
+from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch, get_output_from_batch, init_logger
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 SAVING_INTERVAL = 15000
@@ -42,7 +44,7 @@ class Train(object):
             train_dir = os.path.join(config.log_root, 'train_%s' % args.logdir)
         if not os.path.exists(train_dir):
             os.mkdir(train_dir)
-
+        self.logger = init_logger('train', logfile=train_dir + '/' + 'train_log.log')
         self.model_dir = os.path.join(train_dir, 'model')
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
@@ -72,7 +74,6 @@ class Train(object):
                  list(self.model.reduce_state.parameters())
         initial_lr = config.lr_coverage if config.is_coverage else config.lr
         self.optimizer = Adagrad(params, lr=initial_lr, initial_accumulator_value=config.adagrad_init_acc)
-
         start_iter, start_loss = 0, 0
 
         if model_file_path is not None:
@@ -90,7 +91,7 @@ class Train(object):
 
         return start_iter, start_loss
 
-    def train_one_batch(self, batch):
+    def train_one_batch(self, batch: Batch):
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage = \
             get_input_from_batch(batch, use_cuda)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
@@ -113,9 +114,17 @@ class Train(object):
                                                                                            coverage, di)
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
+            if torch.isnan(gold_probs).any():
+                print('gold_probs go NaN')
             step_loss = -torch.log(gold_probs + config.eps)
+            if torch.isnan(step_loss).any():
+                print('step_loss goes NaN')
             if config.is_coverage:
                 step_coverage_loss = torch.sum(torch.min(attn_dist, coverage), 1)
+                if torch.isnan(step_coverage_loss).any():
+                    print('step coverage loss goes NaN')
+                if random.random() > 0.999:
+                    self.logger.info(f'coverage loss: {step_coverage_loss}')
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss
                 coverage = next_coverage
 
@@ -123,9 +132,12 @@ class Train(object):
             step_loss = step_loss * step_mask
             step_losses.append(step_loss)
 
+        self.prev_articles, self.prev_abstracts = batch.original_articles, batch.original_abstracts
         sum_losses = torch.sum(torch.stack(step_losses, 1), 1)
         batch_avg_loss = sum_losses / dec_lens_var
         loss = torch.mean(batch_avg_loss)
+        if torch.isnan(loss):
+            return loss.item()
 
         loss.backward()
 
@@ -146,6 +158,8 @@ class Train(object):
 
             running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, itr)
             itr += 1
+            if np.isnan(running_avg_loss):
+                self.save_model(running_avg_loss, itr)
 
             if itr % 100 == 0:
                 self.summary_writer.flush()
@@ -170,4 +184,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     train_processor = Train(n_gpu=args.n_gpu)
+
     train_processor.trainIters(config.max_iterations, args.model_file_path)

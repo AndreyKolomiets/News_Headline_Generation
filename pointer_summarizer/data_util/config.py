@@ -1,12 +1,20 @@
 import os
+import re
 
 root_dir = os.path.expanduser("~")
 
 # train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
-train_data_path = '/workspace/_Headline_generation/dataset_chunks_1st_sent/'
-eval_data_path = '/workspace/_Headline_generation/test_1st_sent/'
-decode_data_path = '/workspace/_Headline_generation/val_1st_sent/'
-vocab_path = "/workspace/_Headline_generation/vocab_1st_sent"
+first_sentence_only = False
+train_data_path = '/workspace/_Headline_generation/dataset_chunks/'
+eval_data_path = '/workspace/_Headline_generation/test/'
+decode_data_path = '/workspace/_Headline_generation/val/'
+vocab_path = "/workspace/_Headline_generation/vocab"
+if first_sentence_only:
+    regex = re.compile('/$')
+    train_data_path = regex.sub('_1st_sent/', train_data_path)
+    eval_data_path = regex.sub('_1st_sent/', eval_data_path)
+    decode_data_path = regex.sub('_1st_sent/', decode_data_path)
+    vocab_path = regex.sub('_1st_sent/', vocab_path)
 bpe_vocab_path = '/workspace/_Headline_generation/bpe_encoder.pkl'
 log_root = "/workspace/_Headline_generation/log_pointer_summarizer/log"
 use_bpe = True
@@ -19,9 +27,9 @@ max_enc_steps = 400
 max_dec_steps = 100
 beam_size = 4
 min_dec_steps = 35
-vocab_size = 50000
+vocab_size = 200000
 
-lr = 0.15
+lr = 0.3
 adagrad_init_acc = 0.1
 rand_unif_init_mag = 0.02
 trunc_norm_init_std = 1e-4

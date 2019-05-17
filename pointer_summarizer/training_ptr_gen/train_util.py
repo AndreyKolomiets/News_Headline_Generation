@@ -1,7 +1,25 @@
 from torch.autograd import Variable
 import numpy as np
 import torch
+import logging
 from pointer_summarizer.data_util import config
+
+
+def init_logger(logname: str, logfile: str, fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
+    """
+    Запускает логгер
+    :param logname: название лога
+    :param logfile: имя файла с логом
+    :param fmt: формат сообщений в логе
+    :return:
+    """
+    logger = logging.getLogger(logname)
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(logfile)
+    formatter = logging.Formatter(fmt)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    return logger
 
 
 def get_input_from_batch(batch, use_cuda):

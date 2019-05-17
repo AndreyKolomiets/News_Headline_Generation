@@ -18,7 +18,6 @@ import bpe
 random.seed(1234)
 
 
-# TODO: BPE возвращает итераторы, а не списки, могут быть ошибки
 class Example(object):
 
     def __init__(self, article: bytes, abstract_sentences: List[str], vocab: bpe.Encoder):
@@ -34,7 +33,6 @@ class Example(object):
         if len(article_tokens) < 1:
             article_tokens = [0]
         self.enc_len = len(article_tokens)  # store the length after truncation but before padding
-        # TODO: UNK переходит в __unk, могут быть косяки
         self.enc_input = article_tokens  # list of word ids; OOVs are represented by the id for UNK token
         # if np.random.random() > 0.999:
         #     print([(_, _ in vocab._word_to_id) for _ in article_words])
