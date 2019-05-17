@@ -15,17 +15,21 @@ from torch.autograd import Variable
 import argparse
 from rouge import Rouge
 import pickle
+import bpe
 
-from pointer_summarizer.data_util.batcher import Batcher
-from pointer_summarizer.data_util.data import Vocab
 from pointer_summarizer.data_util import data, config
+if config.use_bpe:
+    from pointer_summarizer.data_util.batcher_bpe import Batcher
+else:
+    from pointer_summarizer.data_util.batcher import Batcher
+from pointer_summarizer.data_util.data import Vocab
+
 from pointer_summarizer.training_ptr_gen.model import Model
 from pointer_summarizer.data_util.utils import write_for_rouge, rouge_eval, rouge_log
 from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name')
-parser.add_argument('--device_id', type=int, default=0)
 parser.add_argument('--logdir', type=str, default=None)
 parser.add_argument('--save_interval', type=int, default=1000)
 args = parser.parse_args()
@@ -58,7 +62,7 @@ class Beam(object):
 
 
 class BeamSearch(object):
-    def __init__(self, model_file_path, device_id=0):
+    def __init__(self, model_file_path):
         model_name = os.path.basename(model_file_path)
         self._decode_dir = os.path.join(config.log_root, 'decode_%s' % (model_name))
         self._rouge_ref_dir = os.path.join(self._decode_dir, 'rouge_ref')
@@ -67,16 +71,23 @@ class BeamSearch(object):
             if not os.path.exists(p):
                 os.mkdir(p)
 
-        self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        if config.use_bpe:
+            self.vocab = data.make_bpe_vocab(config.bpe_vocab_path)
+            self.STOP_DECODING = self.vocab.word_vocab[data.STOP_DECODING]
+        else:
+            self.vocab = Vocab(config.vocab_path, config.vocab_size)
+            self.STOP_DECODING = self.vocab.word2id(data.STOP_DECODING)
         self.batcher = Batcher(config.decode_data_path, self.vocab, mode='decode',
                                batch_size=config.beam_size, single_pass=True)
         time.sleep(15)
 
-        self.model = Model(model_file_path, is_eval=True, device_id=device_id)
+        self.model = Model(model_file_path, is_eval=True)
 
     def sort_beams(self, beams):
         return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
 
+    # TODO: сейчас GPU используется едва ли на четверть,
+    #  поэтому нужно пробовать прогонять батчи побольше и потом декодировать
     def decode(self):
         start = time.time()
         scorer = Rouge()
@@ -90,8 +101,12 @@ class BeamSearch(object):
 
             # Extract the output ids from the hypothesis and convert back to words
             output_ids = [int(t) for t in best_summary.tokens[1:]]
-            decoded_words = data.outputids2words(output_ids, self.vocab,
-                                                 (batch.art_oovs[0] if config.pointer_gen else None))
+            if config.use_bpe:
+                # print(output_ids)
+                decoded_words = next(self.vocab.inverse_transform([output_ids])).split()
+            else:
+                decoded_words = data.outputids2words(output_ids, self.vocab,
+                                                     (batch.art_oovs[0] if config.pointer_gen else None))
 
             # Remove the [STOP] token from decoded_words, if necessary
             try:
@@ -115,7 +130,7 @@ class BeamSearch(object):
                     pickle.dump((decoded, ref), f)
 
             batch = self.batcher.next_batch()
-        with open('decoded_real.pkl', 'wb') as f:
+        with open(self._decode_dir + '/' + 'decoded_real.pkl', 'wb') as f:
             pickle.dump((decoded, ref), f)
         print("Decoder has finished reading dataset for single_pass.")
         print("Now starting ROUGE eval...")
@@ -138,7 +153,8 @@ class BeamSearch(object):
         dec_c = dec_c.squeeze()
 
         # decoder batch preparation, it has beam_size example initially everything is repeated
-        beams = [Beam(tokens=[self.vocab.word2id(data.START_DECODING)],
+        start_decoding_id = self.vocab.word_vocab[data.START_DECODING] if config.use_bpe else self.vocab.word2id(data.START_DECODING)
+        beams = [Beam(tokens=[start_decoding_id],
                       log_probs=[0.0],
                       state=(dec_h[0], dec_c[0]),
                       context=c_t_0[0],
@@ -148,8 +164,10 @@ class BeamSearch(object):
         steps = 0
         while steps < config.max_dec_steps and len(results) < config.beam_size:
             latest_tokens = [h.latest_token for h in beams]
-            latest_tokens = [t if t < self.vocab.size() else self.vocab.word2id(data.UNKNOWN_TOKEN) \
-                             for t in latest_tokens]
+            # Для обычного словаря токены с индексами больше размера словаря являтся неизвестными
+            if not config.use_bpe:
+                latest_tokens = [t if t < self.vocab.size() else self.vocab.word2id(data.UNKNOWN_TOKEN) \
+                                 for t in latest_tokens]
             y_t_1 = Variable(torch.LongTensor(latest_tokens))
             if use_cuda:
                 y_t_1 = y_t_1.cuda()
@@ -205,7 +223,7 @@ class BeamSearch(object):
 
             beams = []
             for h in self.sort_beams(all_beams):
-                if h.latest_token == self.vocab.word2id(data.STOP_DECODING):
+                if h.latest_token == self.STOP_DECODING:
                     if steps >= config.min_dec_steps:
                         results.append(h)
                 else:
@@ -226,6 +244,5 @@ class BeamSearch(object):
 if __name__ == '__main__':
 
     # model_filename = sys.argv[1]
-    # device_id = args.device_id
-    beam_Search_processor = BeamSearch(args.model_name, args.device_id)
+    beam_Search_processor = BeamSearch(args.model_name)
     beam_Search_processor.decode()
