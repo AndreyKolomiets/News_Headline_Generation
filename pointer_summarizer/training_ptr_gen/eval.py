@@ -2,11 +2,10 @@ from __future__ import unicode_literals, print_function, division
 
 import os
 import time
-import sys
-import pickle
 
 import tensorflow as tf
 import torch
+import argparse
 
 from pointer_summarizer.data_util import config
 if config.use_bpe:
@@ -98,6 +97,9 @@ class Evaluate(object):
 
 
 if __name__ == '__main__':
-    model_filename = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_name', type=str, help='Path to model being evaluated')
+    args = parser.parse_args()
+    model_filename = args.model_name  # sys.argv[1]
     eval_processor = Evaluate(model_filename)
     eval_processor.run_eval()

@@ -4,7 +4,7 @@ import re
 root_dir = os.path.expanduser("~")
 
 # train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
-first_sentence_only = False
+first_sentence_only = True
 train_data_path = '/workspace/_Headline_generation/dataset_chunks/'
 eval_data_path = '/workspace/_Headline_generation/test/'
 decode_data_path = '/workspace/_Headline_generation/val/'
@@ -21,13 +21,15 @@ use_bpe = True
 
 # Hyperparameters
 hidden_dim = 256
-emb_dim = 128
+emb_dim = 256
 batch_size = 8
 max_enc_steps = 400
 max_dec_steps = 100
 beam_size = 4
 min_dec_steps = 35
 vocab_size = 200000
+bpe_vocab_size = 8196  # собственно словарь плюс служебные символы.
+# Плюс почему-то для маленького словаря все очень тормозит
 
 lr = 0.3
 adagrad_init_acc = 0.1

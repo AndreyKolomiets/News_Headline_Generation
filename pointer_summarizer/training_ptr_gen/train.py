@@ -25,7 +25,7 @@ from pointer_summarizer.training_ptr_gen.train_util import get_input_from_batch,
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 SAVING_INTERVAL = 15000
-PRINT_INTERVAL = 1000
+PRINT_INTERVAL = 100
 
 
 class Train(object):
@@ -44,7 +44,6 @@ class Train(object):
             train_dir = os.path.join(config.log_root, 'train_%s' % args.logdir)
         if not os.path.exists(train_dir):
             os.mkdir(train_dir)
-        self.logger = init_logger('train', logfile=train_dir + '/' + 'train_log.log')
         self.model_dir = os.path.join(train_dir, 'model')
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
@@ -114,17 +113,9 @@ class Train(object):
                                                                                            coverage, di)
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
-            if torch.isnan(gold_probs).any():
-                print('gold_probs go NaN')
             step_loss = -torch.log(gold_probs + config.eps)
-            if torch.isnan(step_loss).any():
-                print('step_loss goes NaN')
             if config.is_coverage:
                 step_coverage_loss = torch.sum(torch.min(attn_dist, coverage), 1)
-                if torch.isnan(step_coverage_loss).any():
-                    print('step coverage loss goes NaN')
-                if random.random() > 0.999:
-                    self.logger.info(f'coverage loss: {step_coverage_loss}')
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss
                 coverage = next_coverage
 
@@ -136,8 +127,6 @@ class Train(object):
         sum_losses = torch.sum(torch.stack(step_losses, 1), 1)
         batch_avg_loss = sum_losses / dec_lens_var
         loss = torch.mean(batch_avg_loss)
-        if torch.isnan(loss):
-            return loss.item()
 
         loss.backward()
 

@@ -49,7 +49,10 @@ def init_wt_unif(wt):
 class Encoder(nn.Module):
     def __init__(self, n_gpu=1):
         super(Encoder, self).__init__()
-        self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
+        if config.use_bpe:
+            self.embedding = nn.Embedding(config.bpe_vocab_size, config.emb_dim)
+        else:
+            self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
         init_wt_normal(self.embedding.weight)
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
 
@@ -117,33 +120,19 @@ class Attention(nn.Module):
         dec_fea_expanded = dec_fea_expanded.view(-1, n)  # B * t_k x 2*hidden_dim
 
         att_features = encoder_feature + dec_fea_expanded  # B * t_k x 2*hidden_dim
-        if torch.isnan(att_features).any():
-            print('Attention features before coverage go NaN')
-            self.logger.info(f'Attention features before coverage: {att_features}')
         if config.is_coverage:
             coverage_input = coverage.view(-1, 1)  # B * t_k x 1
             coverage_feature = self.W_c(coverage_input)  # B * t_k x 2*hidden_dim
             att_features = att_features + coverage_feature
-        if torch.isnan(att_features).any():
-            print('Attention features go NaN')
-            self.logger.info(f'Attention features: {att_features}')
 
         e = F.tanh(att_features)  # B * t_k x 2*hidden_dim
         scores = self.v(e)  # B * t_k x 1
         scores = scores.view(-1, t_k)  # B x t_k
-        if torch.isnan(scores).any():
-            print('Scores go NaN')
-            self.logger.info(f'scores: {scores}')
 
         attn_dist_ = F.softmax(scores, dim=1) * enc_padding_mask  # B x t_k
 
         normalization_factor = attn_dist_.sum(1, keepdim=True)
-        if torch.isnan(normalization_factor).any():
-            print('Normalization factor goes NaN')
-            self.logger.info(f'normalization factor: {normalization_factor}')
-            # sys.exit('nans found, exiting...')
-        if random.random() > 0.999:
-            self.logger.info(f'normalization factor: {normalization_factor}')
+
         attn_dist = attn_dist_ / normalization_factor
 
         attn_dist = attn_dist.unsqueeze(1)  # B x 1 x t_k
@@ -164,7 +153,10 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.attention_network = Attention()
         # decoder
-        self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
+        if config.use_bpe:
+            self.embedding = nn.Embedding(config.bpe_vocab_size, config.emb_dim)
+        else:
+            self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
         init_wt_normal(self.embedding.weight)
 
         self.x_context = nn.Linear(config.hidden_dim * 2 + config.emb_dim, config.emb_dim)
@@ -193,35 +185,12 @@ class Decoder(nn.Module):
             coverage = coverage_next
 
         y_t_1_embd = self.embedding(y_t_1)
-        if torch.isnan(c_t_1).any():
-            print('decoder c_t_1 goes nan')
-            self.logger.info(f'decoder c_t_1 {c_t_1}')
-        if torch.isnan(y_t_1_embd).any():
-            print('decoder y_t_1_embd goes nan')
-            self.logger.info(f'decoder y_t_1_embd {y_t_1_embd}')
-            self.logger.info(f'embedding input: {y_t_1}')
+
         x = self.x_context(torch.cat((c_t_1, y_t_1_embd), 1))
-        if torch.isnan(x).any():
-            print('decoder x goes nan')
-            self.logger.info(f'decoder x {x}')
-        if torch.isnan(s_t_1[0]).any():
-            print('decoder s_t_1[0] goes nan')
-            self.logger.info(f'decoder s_t_1[0] {s_t_1[0]}')
-        if torch.isnan(s_t_1[1]).any():
-            print('decoder s_t_1[1] goes nan')
-            self.logger.info(f'decoder s_t_1[1] {s_t_1[1]}')
+
         lstm_out, s_t = self.lstm(x.unsqueeze(1), s_t_1)
-        if torch.isnan(lstm_out).any():
-            print('decoder LSTM out goes nan')
-            self.logger.info(f'decoder LSTM out {lstm_out}')
 
         h_decoder, c_decoder = s_t
-        if torch.isnan(h_decoder).any():
-            print('h_decoder goes nan')
-            self.logger.info(f'h_decoder {h_decoder}')
-        if torch.isnan(c_decoder).any():
-            print('c_decoder goes nan')
-            self.logger.info(f'h_decoder {c_decoder}')
         s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
                              c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
         c_t, attn_dist, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
