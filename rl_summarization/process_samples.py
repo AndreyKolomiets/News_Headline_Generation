@@ -5,10 +5,10 @@ import sys
 import re
 import argparse
 import torch
-from util import read_corpus
+from rl_summarization.util import read_corpus
 import numpy as np
 from scipy.misc import comb
-from vocab import Vocab, VocabEntry
+from rl_summarization.vocab import Vocab, VocabEntry
 import math
 
 
@@ -38,11 +38,11 @@ def sample_from_model(args):
         tgt_sent2 = line[len('target:'):]
         assert tgt_sent == tgt_sent2
 
-        line = f.readline().strip() # samples
+        line = f.readline().strip()  # samples
 
         tgt_sent = ' '.join(tgt_sent.split(' ')[1:-1])
         tgt_samples = set()
-        for i in xrange(1, 101):
+        for i in range(1, 101):
             line = f.readline().rstrip('\n')
             m = tgt_sent_pattern.match(line)
 
@@ -87,7 +87,7 @@ def get_new_ngram(ngram, n, vocab):
     replace ngram `ngram` with a newly sampled ngram of the same length
     """
 
-    new_ngram_wids = [np.random.randint(3, len(vocab)) for i in xrange(n)]
+    new_ngram_wids = [np.random.randint(3, len(vocab)) for i in range(n)]
     new_ngram = [vocab.id2word[wid] for wid in new_ngram_wids]
 
     return new_ngram
@@ -111,7 +111,7 @@ def sample_ngram(args):
 
         tgt_len = len(tgt_sent)
         tgt_samples = []
-        tgt_samples_distort_rates = []    # how many unigrams are replaced
+        tgt_samples_distort_rates = []  # how many unigrams are replaced
 
         # generate 100 samples
 
@@ -119,15 +119,16 @@ def sample_ngram(args):
         tgt_samples.append(tgt_sent)
         tgt_samples_distort_rates.append(0)
 
-        for sid in xrange(args.sample_size - 1):
-            n = np.random.randint(1, min(tgt_len, args.max_ngram_size + 1)) # we do not replace the last token: it must be a period!
+        for sid in range(args.sample_size - 1):
+            n = np.random.randint(1, min(tgt_len,
+                                         args.max_ngram_size + 1))  # we do not replace the last token: it must be a period!
 
             idx = np.random.randint(tgt_len - n)
-            ngram = tgt_sent[idx: idx+n]
+            ngram = tgt_sent[idx: idx + n]
             new_ngram = get_new_ngram(ngram, n, tgt_vocab)
 
             sampled_tgt_sent = list(tgt_sent)
-            sampled_tgt_sent[idx: idx+n] = new_ngram
+            sampled_tgt_sent[idx: idx + n] = new_ngram
 
             # compute the probability of this sample
             # prob = 1. / args.max_ngram_size * 1. / (tgt_len - 1 + n) * 1 / (len(tgt_vocab) ** n)
@@ -180,24 +181,27 @@ def sample_ngram_adapt(args):
         # append itself
         tgt_samples.append(tgt_sent)
 
-        for sid in xrange(args.sample_size - 1):
+        for sid in range(args.sample_size - 1):
             max_n = min(tgt_len - 1, 4)
             bias_n = int(max_n * tgt_len / max_len) + 1
-            assert 1 <= bias_n <= 4, 'bias_n={}, not in [1,4], max_n={}, tgt_len={}, max_len={}'.format(bias_n, max_n, tgt_len, max_len)
+            assert 1 <= bias_n <= 4, 'bias_n={}, not in [1,4], max_n={}, tgt_len={}, max_len={}'.format(bias_n, max_n,
+                                                                                                        tgt_len,
+                                                                                                        max_len)
 
-            p = [1.0/(max_n + 5)] * max_n
+            p = [1.0 / (max_n + 5)] * max_n
             p[bias_n - 1] = 1 - p[0] * (max_n - 1)
             assert abs(sum(p) - 1) < 1e-10, 'sum(p) != 1'
 
-            n = np.random.choice(np.arange(1, int(max_n + 1)), p=p)  # we do not replace the last token: it must be a period!
+            n = np.random.choice(np.arange(1, int(max_n + 1)),
+                                 p=p)  # we do not replace the last token: it must be a period!
             assert n < tgt_len, 'n={}, tgt_len={}'.format(n, tgt_len)
 
             idx = np.random.randint(tgt_len - n)
-            ngram = tgt_sent[idx: idx+n]
+            ngram = tgt_sent[idx: idx + n]
             new_ngram = get_new_ngram(ngram, n, tgt_vocab)
 
             sampled_tgt_sent = list(tgt_sent)
-            sampled_tgt_sent[idx: idx+n] = new_ngram
+            sampled_tgt_sent[idx: idx + n] = new_ngram
 
             tgt_samples.append(sampled_tgt_sent)
 
@@ -266,9 +270,9 @@ def generate_hamming_distance_payoff_distribution(max_sent_len, vocab_size, tau=
     """compute the q distribution for Hamming Distance (substitution only) as in the RAML paper"""
     probs = dict()
     Z_qs = dict()
-    for sent_len in xrange(1, max_sent_len + 1):
+    for sent_len in range(1, max_sent_len + 1):
         counts = [1.]  # e = 0, count = 1
-        for e in xrange(1, sent_len + 1):
+        for e in range(1, sent_len + 1):
             # apply the rescaling trick as in https://gist.github.com/norouzi/8c4d244922fa052fa8ec18d8af52d366
             count = comb(sent_len, e) * math.exp(-e / tau) * ((vocab_size - 1) ** (e - e / tau))
             counts.append(count)

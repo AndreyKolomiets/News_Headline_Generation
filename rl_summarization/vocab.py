@@ -5,7 +5,7 @@ from itertools import chain
 
 import torch
 
-from util import read_corpus
+from rl_summarization.util import read_corpus
 
 
 class VocabEntry(object):
@@ -17,7 +17,7 @@ class VocabEntry(object):
         self.word2id['</s>'] = 2
         self.word2id['<unk>'] = 3
 
-        self.id2word = {v: k for k, v in self.word2id.iteritems()}
+        self.id2word = {v: k for k, v in self.word2id.items()}
 
     def __getitem__(self, word):
         return self.word2id.get(word, self.unk_id)
@@ -82,8 +82,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--src_vocab_size', default=50000, type=int, help='source vocabulary size')
     parser.add_argument('--tgt_vocab_size', default=50000, type=int, help='target vocabulary size')
-    parser.add_argument('--include_singleton', action='store_true', default=False, help='whether to include singleton'
-                                                                                        'in the vocabulary (default=False)')
+    parser.add_argument('--include_singleton',
+                        action='store_true', default=False,
+                        help='whether to include singleton in the vocabulary (default=False)')
 
     parser.add_argument('--train_src', type=str, required=True, help='file of source sentences')
     parser.add_argument('--train_tgt', type=str, required=True, help='file of target sentences')
@@ -98,7 +99,8 @@ if __name__ == '__main__':
     src_sents = read_corpus(args.train_src, source='src')
     tgt_sents = read_corpus(args.train_tgt, source='tgt')
 
-    vocab = Vocab(src_sents, tgt_sents, args.src_vocab_size, args.tgt_vocab_size, remove_singleton=not args.include_singleton)
+    vocab = Vocab(src_sents, tgt_sents, args.src_vocab_size, args.tgt_vocab_size,
+                  remove_singleton=not args.include_singleton)
     print('generated vocabulary, source %d words, target %d words' % (len(vocab.src), len(vocab.tgt)))
 
     torch.save(vocab, args.output)

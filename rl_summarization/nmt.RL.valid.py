@@ -18,9 +18,9 @@ from collections import defaultdict, Counter, namedtuple
 from itertools import chain, islice
 import argparse, os, sys
 
-from util import read_corpus, data_iter, batch_slice
-from vocab import Vocab, VocabEntry
-from process_samples import generate_hamming_distance_payoff_distribution
+from rl_summarization.util import read_corpus, data_iter, batch_slice
+from rl_summarization.vocab import Vocab, VocabEntry
+from rl_summarization.process_samples import generate_hamming_distance_payoff_distribution
 import math
 
 
@@ -95,9 +95,9 @@ def input_transpose(sents, pad_token):
 
     sents_t = []
     masks = []
-    for i in xrange(max_len):
-        sents_t.append([sents[k][i] if len(sents[k]) > i else pad_token for k in xrange(batch_size)])
-        masks.append([1 if len(sents[k]) > i else 0 for k in xrange(batch_size)])
+    for i in range(max_len):
+        sents_t.append([sents[k][i] if len(sents[k]) > i else pad_token for k in range(batch_size)])
+        masks.append([1 if len(sents[k]) > i else 0 for k in range(batch_size)])
 
     return sents_t, masks
 
@@ -480,7 +480,7 @@ class NMT(nn.Module):
 
         new_tensor = dec_init_state.data.new
         att_tm1 = Variable(new_tensor(batch_size, self.args.hidden_size).zero_(), volatile=True)
-        y_0 = Variable(torch.LongTensor([self.vocab.tgt['<s>'] for _ in xrange(batch_size)]), volatile=True)
+        y_0 = Variable(torch.LongTensor([self.vocab.tgt['<s>'] for _ in range(batch_size)]), volatile=True)
 
         eos = self.vocab.tgt['</s>']
         # eos_batch = torch.LongTensor([eos] * batch_size)
@@ -535,7 +535,7 @@ class NMT(nn.Module):
             hidden = h_t, cell_t
 
         # post-processing
-        completed_samples = [list([list() for _ in xrange(sample_size)]) for _ in xrange(src_sents_num)]
+        completed_samples = [list([list() for _ in range(sample_size)]) for _ in range(src_sents_num)]
         for y_t in samples:
             for i, sampled_word in enumerate(y_t.cpu().data):
                 src_sent_id = i % src_sents_num
@@ -1121,7 +1121,7 @@ def read_raml_train_data(data_file, temp):
             tgt_num = int(num_pattern.match(f.readline().strip()).group(1))
             tgt_samples = []
             tgt_scores = []
-            for i in xrange(tgt_num):
+            for i in range(tgt_num):
                 d = f.readline().strip().split(' ||| ')
                 if len(d) < 2:
                     continue
@@ -1501,7 +1501,7 @@ def compute_lm_prob(args):
         tgt_log_scores = tgt_log_scores.view(-1, batch_size) # .permute(1, 0)
         # (batch_size)
         tgt_sent_scores = tgt_log_scores.sum(dim=0).squeeze()
-        tgt_sent_word_scores = [tgt_sent_scores[i].data[0] / pred_tgt_word_nums[i] for i in xrange(batch_size)]
+        tgt_sent_word_scores = [tgt_sent_scores[i].data[0] / pred_tgt_word_nums[i] for i in range(batch_size)]
 
         for src_sent, tgt_sent, score in zip(src_sents, tgt_sents, tgt_sent_word_scores):
             f.write('%s ||| %s ||| %f\n' % (' '.join(src_sent), ' '.join(tgt_sent), score))
@@ -1577,7 +1577,7 @@ def interactive(args):
         model = model.cuda()
 
     while True:
-        src_sent = raw_input('Source Sentence:')
+        src_sent = input('Source Sentence:')
         src_sent = src_sent.strip().split(' ')
         hyps = model.translate(src_sent)
         for i, hyp in enumerate(hyps, 1):

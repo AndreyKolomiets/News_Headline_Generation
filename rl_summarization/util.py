@@ -1,6 +1,7 @@
 from collections import defaultdict
 import numpy as np
 
+
 def read_corpus(file_path, source):
     data = []
     for line in open(file_path):
@@ -15,7 +16,7 @@ def read_corpus(file_path, source):
 
 def batch_slice(data, batch_size, sort=True):
     batch_num = int(np.ceil(len(data) / float(batch_size)))
-    for i in xrange(batch_num):
+    for i in range(batch_num):
         cur_batch_size = batch_size if i < batch_num - 1 else len(data) - batch_size * i
         src_sents = [data[i * batch_size + b][0] for b in range(cur_batch_size)]
         tgt_sents = [data[i * batch_size + b][1] for b in range(cur_batch_size)]
@@ -42,7 +43,8 @@ def data_iter(data, batch_size, shuffle=True):
     batched_data = []
     for src_len in buckets:
         tuples = buckets[src_len]
-        if shuffle: np.random.shuffle(tuples)
+        if shuffle:
+            np.random.shuffle(tuples)
         batched_data.extend(list(batch_slice(tuples, batch_size)))
 
     if shuffle:

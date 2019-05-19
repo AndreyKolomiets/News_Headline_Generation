@@ -1,11 +1,11 @@
 import os
 
-train_src="../dynet_nmt/data/train.de-en.de.wmixerprep"
-train_tgt="../dynet_nmt/data/train.de-en.en.wmixerprep"
-dev_src="../dynet_nmt/data/valid.de-en.de"
-dev_tgt="../dynet_nmt/data/valid.de-en.en"
-test_src="../dynet_nmt/data/test.de-en.de"
-test_tgt="../dynet_nmt/data/test.de-en.en"
+train_src = "../dynet_nmt/data/train.de-en.de.wmixerprep"
+train_tgt = "../dynet_nmt/data/train.de-en.en.wmixerprep"
+dev_src = "../dynet_nmt/data/valid.de-en.de"
+dev_tgt = "../dynet_nmt/data/valid.de-en.en"
+test_src = "../dynet_nmt/data/test.de-en.de"
+test_tgt = "../dynet_nmt/data/test.de-en.en"
 
 for temp in [0.6, 0.8]:  # 0.75, 0.80, 0.85, 0.90, 0.95, 1.0
     job_name = 'iwslt14.raml.512enc.corrupt_ngram.t%.3f' % temp
@@ -52,10 +52,10 @@ python nmt.py \
 echo "test result" >> logs/{train_log}
 perl multi-bleu.perl {test_tgt} < decode/{decode_file} >> logs/{train_log}
       
-""".format(model_name=model_name, temp=temp, 
-    train_src=train_src, train_tgt=train_tgt, 
-    dev_src=dev_src, dev_tgt=dev_tgt,
-    test_src=test_src, test_tgt=test_tgt,
-    train_log=train_log, decode_file=decode_file))
+""".format(model_name=model_name, temp=temp,
+           train_src=train_src, train_tgt=train_tgt,
+           dev_src=dev_src, dev_tgt=dev_tgt,
+           test_src=test_src, test_tgt=test_tgt,
+           train_log=train_log, decode_file=decode_file))
 
     os.system('bash submit_job.sh %s' % job_file)
