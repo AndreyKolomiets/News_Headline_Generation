@@ -820,6 +820,7 @@ def my_lcs(string, sub):
     return lengths[len(string)][len(sub)]
 
 
+# TODO: здесь куча мутного кода, считающего rouge, надо заменить на готовую библиотеку
 def calc_Rouge_L(candidate, refs):
     """
         Compute ROUGE-L score given one candidate and references for an image

@@ -2,6 +2,7 @@ from __future__ import print_function
 import argparse
 from collections import Counter
 from itertools import chain
+from typing import List
 
 import torch
 
@@ -46,7 +47,7 @@ class VocabEntry(object):
             return self[word]
 
     @staticmethod
-    def from_corpus(corpus, size, remove_singleton=True):
+    def from_corpus(corpus: List[List[str]], size: int, remove_singleton=True):
         vocab_entry = VocabEntry()
 
         word_freq = Counter(chain(*corpus))
@@ -65,7 +66,8 @@ class VocabEntry(object):
 
 
 class Vocab(object):
-    def __init__(self, src_sents, tgt_sents, src_vocab_size, tgt_vocab_size, remove_singleton=True):
+    def __init__(self, src_sents: List[List[str]], tgt_sents: List[List[str]],
+                 src_vocab_size: int, tgt_vocab_size: int, remove_singleton=True):
         assert len(src_sents) == len(tgt_sents)
 
         print('initialize source vocabulary ..')

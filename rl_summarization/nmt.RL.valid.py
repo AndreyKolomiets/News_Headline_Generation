@@ -1640,7 +1640,7 @@ if __name__ == '__main__':
     if args.mode == 'train':
         train(args)
     elif args.mode == 'RL_train':
-	RL_train(args)
+        RL_train(args)
     elif args.mode == 'raml_train':
         train_raml(args)
     elif args.mode == 'sample':

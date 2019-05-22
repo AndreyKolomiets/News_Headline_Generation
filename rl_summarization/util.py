@@ -1,11 +1,24 @@
 from collections import defaultdict
 import numpy as np
+import os
+from nltk.tokenize import wordpunct_tokenize
 
 
-def read_corpus(file_path, source):
+def read_corpus(file_path: str, source: str):
+    """
+    Чтение текстов либо заголовков (каждый сохранен в отдельном файле)
+    :param file_path:
+    :param source:
+    :return:
+    """
     data = []
-    for line in open(file_path):
-        sent = line.strip().split(' ')
+    if not file_path.endswith('/'):
+        file_path += '/'
+    for file in os.listdir(file_path):
+        sent = []
+        with open(os.path.join(file_path, file), 'r', encoding='utf-8') as f:
+            for line in f:
+                sent.extend(wordpunct_tokenize(line))
         # only append <s> and </s> to the target sentence
         if source == 'tgt':
             sent = ['<s>'] + sent + ['</s>']
@@ -37,8 +50,7 @@ def data_iter(data, batch_size, shuffle=True):
 
     buckets = defaultdict(list)
     for pair in data:
-        src_sent = pair[0]
-        buckets[len(src_sent)].append(pair)
+        buckets[len(pair[0])].append(pair)
 
     batched_data = []
     for src_len in buckets:
