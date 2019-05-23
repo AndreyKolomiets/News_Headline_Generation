@@ -1,7 +1,20 @@
-train_data_path = "data/chunked/train/train_*"
-valid_data_path = "data/chunked/valid/valid_*"
-test_data_path = "data/chunked/test/test_*"
-vocab_path = "data/vocab"
+import re
+
+first_sentence_only = True
+train_data_path = '/workspace/_Headline_generation/dataset_chunks/'
+eval_data_path = '/workspace/_Headline_generation/test/'
+decode_data_path = '/workspace/_Headline_generation/val/'
+vocab_path = "/workspace/_Headline_generation/vocab"
+if first_sentence_only:
+    regex = re.compile('/$')
+    train_data_path = regex.sub('_1st_sent/', train_data_path)
+    eval_data_path = regex.sub('_1st_sent/', eval_data_path)
+    decode_data_path = regex.sub('_1st_sent/', decode_data_path)
+    vocab_path = regex.sub('_1st_sent/', vocab_path)
+bpe_vocab_path = '/workspace/_Headline_generation/bpe_encoder.pkl'
+log_root = "/workspace/_Headline_generation/log_rl_summarizer/"
+# TODO: пока это не прикручено к RL summarizer
+use_bpe = True
 
 # Hyperparameters
 hidden_dim = 512

@@ -1,12 +1,13 @@
 import os
 # TODO: еще один хардкод
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Set cuda device
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Set cuda device
 
 import time
 
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
+from tensorboardX import SummaryWriter
 from rl_summ2.model import Model
 
 from rl_summ2.data_util import config, data
@@ -17,6 +18,7 @@ from torch.distributions import Categorical
 from rouge import Rouge
 from numpy import random
 import argparse
+import traceback
 
 random.seed(123)
 T.manual_seed(123)
@@ -29,12 +31,14 @@ class Train(object):
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
-        self.opt = opt
+        self.args = opt
         self.start_id = self.vocab.word2id(data.START_DECODING)
         self.end_id = self.vocab.word2id(data.STOP_DECODING)
         self.pad_id = self.vocab.word2id(data.PAD_TOKEN)
         self.unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
         time.sleep(5)
+        self.writer = SummaryWriter(config.log_root + args.model_name)
+        self.iter = 0
 
     def save_model(self, iter):
         save_path = config.save_model_path + "/%07d.tar" % iter
@@ -49,15 +53,15 @@ class Train(object):
         self.model = get_cuda(self.model)
         self.trainer = T.optim.Adam(self.model.parameters(), lr=config.lr)
         start_iter = 0
-        if self.opt.load_model is not None:
-            load_model_path = os.path.join(config.save_model_path, self.opt.load_model)
+        if self.args.load_model is not None:
+            load_model_path = os.path.join(config.save_model_path, self.args.load_model)
             checkpoint = T.load(load_model_path)
             start_iter = checkpoint["iter"]
             self.model.load_state_dict(checkpoint["model_dict"])
             self.trainer.load_state_dict(checkpoint["trainer_dict"])
             print("Loaded model at " + load_model_path)
-        if self.opt.new_lr is not None:
-            self.trainer = T.optim.Adam(self.model.parameters(), lr=self.opt.new_lr)
+        if self.args.new_lr is not None:
+            self.trainer = T.optim.Adam(self.model.parameters(), lr=self.args.new_lr)
         return start_iter
 
     def train_batch_MLE(self, enc_out, enc_hidden, enc_padding_mask, ct_e, extra_zeros, enc_batch_extend_vocab, batch):
@@ -182,12 +186,14 @@ class Train(object):
         try:
             scores = rouge.get_scores(decoded_sents, original_sents)
         except Exception:
+            traceback.print_exc()
             print("Rouge failed for multi sentence evaluation.. Finding exact pair")
             scores = []
             for i in range(len(decoded_sents)):
                 try:
                     score = rouge.get_scores(decoded_sents[i], original_sents[i])
                 except Exception:
+                    traceback.print_exc()
                     print("Error occured at:")
                     print("decoded_sents:", decoded_sents[i])
                     print("original_sents:", original_sents[i])
@@ -213,13 +219,13 @@ class Train(object):
         enc_out, enc_hidden = self.model.encoder(enc_batch, enc_lens)
 
         # -------------------------------Summarization-----------------------
-        if self.opt.train_mle == "yes":  # perform MLE training
+        if self.args.train_mle == "yes":  # perform MLE training
             mle_loss = self.train_batch_MLE(enc_out, enc_hidden, enc_padding_mask, context, extra_zeros,
                                             enc_batch_extend_vocab, batch)
         else:
             mle_loss = get_cuda(T.FloatTensor([0]))
         # --------------RL training-----------------------------------------------------
-        if self.opt.train_rl == "yes":  # perform reinforcement learning training
+        if self.args.train_rl == "yes":  # perform reinforcement learning training
             # multinomial sampling
             sample_sents, RL_log_probs = self.train_batch_RL(enc_out, enc_hidden, enc_padding_mask, context,
                                                              extra_zeros, enc_batch_extend_vocab, batch.art_oovs,
@@ -236,6 +242,7 @@ class Train(object):
             rl_loss = -(
                         sample_reward - baseline_reward) * RL_log_probs  # Self-critic policy gradient training (eq 15 in https://arxiv.org/pdf/1705.04304.pdf)
             rl_loss = T.mean(rl_loss)
+            self.writer.add_scalar('loss/rl_loss', rl_loss.item(), iter)
 
             batch_reward = T.mean(sample_reward).item()
         else:
@@ -244,7 +251,10 @@ class Train(object):
 
         # ------------------------------------------------------------------------------------
         self.trainer.zero_grad()
-        (self.opt.mle_weight * mle_loss + self.opt.rl_weight * rl_loss).backward()
+        (self.args.mle_weight * mle_loss + self.args.rl_weight * rl_loss).backward()
+        if (self.args.mle_weight > 0) and (self.args.rl_weight > 0):
+            self.writer.add_scalar('loss/total_loss',
+                                   self.args.mle_weight * mle_loss.item() + self.args.rl_weight * rl_loss.item())
         self.trainer.step()
 
         return mle_loss.item(), batch_reward
@@ -256,6 +266,8 @@ class Train(object):
             batch = self.batcher.next_batch()
             try:
                 mle_loss, r = self.train_one_batch(batch, iter)
+                self.writer.add_scalar('loss/mle_loss', mle_loss, iter)
+                self.writer.add_scalar('loss/batch_reward', r, iter)
             except KeyboardInterrupt:
                 print("-------------------Keyboard Interrupt------------------")
                 exit(0)
@@ -278,15 +290,16 @@ class Train(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_mle', type=str, default="yes")
-    parser.add_argument('--train_rl', type=str, default="no")
-    parser.add_argument('--mle_weight', type=float, default=1.0)
+    parser.add_argument('--train_rl', type=str, default="yes")
+    parser.add_argument('--mle_weight', type=float, default=0.5)
     parser.add_argument('--load_model', type=str, default=None)
     parser.add_argument('--new_lr', type=float, default=None)
-    opt = parser.parse_args()
-    opt.rl_weight = 1 - opt.mle_weight
+    parser.add_argument('--model_name', type=str, default='test')
+    args = parser.parse_args()
+    args.rl_weight = 1 - args.mle_weight
     print("Training mle: %s, Training rl: %s, mle weight: %.2f, rl weight: %.2f" % (
-    opt.train_mle, opt.train_rl, opt.mle_weight, opt.rl_weight))
+        args.train_mle, args.train_rl, args.mle_weight, args.rl_weight))
     print("intra_encoder:", config.intra_encoder, "intra_decoder:", config.intra_decoder)
 
-    train_processor = Train(opt)
+    train_processor = Train(args)
     train_processor.trainIters()
