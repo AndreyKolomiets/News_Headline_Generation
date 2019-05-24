@@ -1,6 +1,7 @@
 # Most of this file is copied form https://github.com/abisee/pointer-generator/blob/master/data.py
 
 import glob
+import os
 import random
 import struct
 import csv
@@ -33,7 +34,7 @@ class Vocab(object):
             self._count += 1
 
         # Read the vocab file and add words up to max_size
-        with open(vocab_file, 'r') as vocab_f:
+        with open(vocab_file, 'r', encoding='utf-8') as vocab_f:
             for line in vocab_f:
                 pieces = line.split()
                 if len(pieces) != 2:
@@ -79,14 +80,14 @@ class Vocab(object):
 
 def example_generator(data_path, single_pass):
     while True:
-        filelist = glob.glob(data_path)  # get the list of datafiles
+        filelist = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]  # get the list of datafiles
         assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
         if single_pass:
             filelist = sorted(filelist)
         else:
             random.shuffle(filelist)
         for f in filelist:
-            reader = open(f, 'rb')
+            reader = open(data_path+f, 'rb')
             while True:
                 len_bytes = reader.read(8)
                 if not len_bytes: break  # finished reading this file

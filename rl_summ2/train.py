@@ -41,7 +41,7 @@ class Train(object):
         self.iter = 0
 
     def save_model(self, iter):
-        save_path = config.save_model_path + "/%07d.tar" % iter
+        save_path = config.log_root + self.args.model_name + "/%07d.tar" % iter
         T.save({
             "iter": iter + 1,
             "model_dict": self.model.state_dict(),
@@ -248,13 +248,13 @@ class Train(object):
         else:
             rl_loss = get_cuda(T.FloatTensor([0]))
             batch_reward = 0
-
-        # ------------------------------------------------------------------------------------
-        self.trainer.zero_grad()
-        (self.args.mle_weight * mle_loss + self.args.rl_weight * rl_loss).backward()
         if (self.args.mle_weight > 0) and (self.args.rl_weight > 0):
             self.writer.add_scalar('loss/total_loss',
                                    self.args.mle_weight * mle_loss.item() + self.args.rl_weight * rl_loss.item())
+        # ------------------------------------------------------------------------------------
+        self.trainer.zero_grad()
+        (self.args.mle_weight * mle_loss + self.args.rl_weight * rl_loss).backward()
+
         self.trainer.step()
 
         return mle_loss.item(), batch_reward

@@ -1,26 +1,23 @@
 import os
-# TODO: жесткий хардкод, лучше проставлять ручками при запуске
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# жесткий хардкод, лучше проставлять ручками при запуске
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import time
 
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 from rl_summ2.model import Model
+import datetime
 
 from rl_summ2.data_util import config, data
 from rl_summ2.data_util.batcher import Batcher
 from rl_summ2.data_util.data import Vocab
-from rl_summ2.train_util import *
-from rl_summ2.beam_search import *
+from rl_summ2.train_util import get_cuda, get_enc_data
+from rl_summ2.beam_search import beam_search
 from rouge import Rouge
 import argparse
-
-
-def get_cuda(tensor):
-    if T.cuda.is_available():
-        tensor = tensor.cuda()
-    return tensor
+from tqdm import trange, tqdm
+from pointer_summarizer.training_ptr_gen.train_util import init_logger
 
 
 class Evaluate(object):
@@ -29,12 +26,13 @@ class Evaluate(object):
         self.batcher = Batcher(data_path, self.vocab, mode='eval',
                                batch_size=batch_size, single_pass=True)
         self.opt = opt
+        self.logger = init_logger('eval', config.log_root + opt.model_name + '/logfile.log')
         time.sleep(5)
 
     def setup_valid(self):
         self.model = Model()
         self.model = get_cuda(self.model)
-        checkpoint = T.load(os.path.join(config.save_model_path, self.opt.load_model))
+        checkpoint = T.load(self.opt.load_model)
         self.model.load_state_dict(checkpoint["model_dict"])
 
     def print_original_predicted(self, decoded_sents, ref_sents, article_sents, loadfile):
@@ -57,7 +55,10 @@ class Evaluate(object):
         ref_sents = []
         article_sents = []
         rouge = Rouge()
+        ii = 0
+        t_start = datetime.datetime.now()
         while batch is not None:
+            # print('new batch ')
             enc_batch, enc_lens, enc_padding_mask, enc_batch_extend_vocab, extra_zeros, ct_e = get_enc_data(batch)
 
             with T.autograd.no_grad():
@@ -80,9 +81,12 @@ class Evaluate(object):
                 article = batch.original_articles[i]
                 ref_sents.append(abstract)
                 article_sents.append(article)
+            ii += 1
+            if ii % 1000 == 0:
+                print(f'1000 batches processed in {datetime.datetime.now() - t_start}')
+                t_start = datetime.datetime.now()
 
             batch = self.batcher.next_batch()
-
         load_file = self.opt.load_model
 
         if print_sents:
@@ -94,20 +98,25 @@ class Evaluate(object):
         else:
             rouge_l = scores["rouge-l"]["f"]
             print(load_file, "rouge_l:", "%.4f" % rouge_l)
+            mean_rouge = sum(_['f'] for _ in scores.values()) / 3
+            print(load_file, "mean_rouge:", "%.4f" % mean_rouge)
+            self.logger.info("mean_rouge: %.4f" % mean_rouge)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="validate", choices=["validate", "test"])
-    parser.add_argument("--start_from", type=str, default="0020000.tar")
+    parser.add_argument("--start_from", type=int, default=0)
     parser.add_argument("--load_model", type=str, default=None)
+    parser.add_argument('--model_name', type=str)
     opt = parser.parse_args()
 
     if opt.task == "validate":
-        saved_models = os.listdir(config.save_model_path)
+        saved_models = [config.log_root + opt.model_name + '/' + f
+                        for f in os.listdir(config.log_root + opt.model_name)
+                        if (not f.startswith('events.')) and (not f.startswith('logfile'))]
         saved_models.sort()
-        file_idx = saved_models.index(opt.start_from)
-        saved_models = saved_models[file_idx:]
+        saved_models = saved_models[opt.start_from:]
         for f in saved_models:
             opt.load_model = f
             eval_processor = Evaluate(config.valid_data_path, opt)
