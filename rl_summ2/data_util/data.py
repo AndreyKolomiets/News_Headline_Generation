@@ -5,14 +5,20 @@ import os
 import random
 import struct
 import csv
+import pickle
 from tensorflow.core.example import example_pb2
+from nltk.tokenize import wordpunct_tokenize
+from itertools import chain
+import bpe
+from rl_summ2.data_util import config
+from pointer_summarizer.data_util.data import make_bpe_vocab
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
 
 PAD_TOKEN = '[PAD]'  # This has a vocab id, which is used to pad the encoder input, decoder input and target sequence
-UNKNOWN_TOKEN = '[UNK]'  # This has a vocab id, which is used to represent out-of-vocabulary words
+UNKNOWN_TOKEN = '[UNK]' if not config.use_bpe else '__unk'  # This has a vocab id, which is used to represent out-of-vocabulary words
 START_DECODING = '[START]'  # This has a vocab id, which is used at the start of every decoder input sequence
 STOP_DECODING = '[STOP]'  # This has a vocab id, which is used at the end of untruncated target sequences
 
@@ -132,20 +138,24 @@ def abstract2ids(abstract_words, vocab, article_oovs):
 
 
 def outputids2words(id_list, vocab, article_oovs):
-    words = []
-    for i in id_list:
-        try:
-            w = vocab.id2word(i)  # might be [UNK]
-        except ValueError as e:  # w is OOV
-            assert article_oovs is not None, "Error: model produced a word ID that isn't in the vocabulary. This should not happen in baseline (no pointer-generator) mode"
-            article_oov_idx = i - vocab.size()
+
+    if not config.use_bpe:
+        words = []
+        for i in id_list:
             try:
-                w = article_oovs[article_oov_idx]
-            except ValueError as e:  # i doesn't correspond to an article oov
-                raise ValueError(
-                    'Error: model produced word ID %i which corresponds to article OOV %i but this example only has %i article OOVs' % (
-                    i, article_oov_idx, len(article_oovs)))
-        words.append(w)
+                w = vocab.id2word(i)  # might be [UNK]
+            except ValueError as e:  # w is OOV
+                assert article_oovs is not None, "Error: model produced a word ID that isn't in the vocabulary. This should not happen in baseline (no pointer-generator) mode"
+                article_oov_idx = i - vocab.size()
+                try:
+                    w = article_oovs[article_oov_idx]
+                except ValueError as e:  # i doesn't correspond to an article oov
+                    raise ValueError(
+                        'Error: model produced word ID %i which corresponds to article OOV %i but this example only has %i article OOVs' % (
+                        i, article_oov_idx, len(article_oovs)))
+            words.append(w)
+    else:
+        words = next(vocab.inverse_transform([id_list])).split()
     return words
 
 

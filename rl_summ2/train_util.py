@@ -24,14 +24,16 @@ def get_enc_data(batch):
     ct_e = get_cuda(ct_e)
 
     enc_batch_extend_vocab = None
-    if batch.enc_batch_extend_vocab is not None:
-        enc_batch_extend_vocab = T.from_numpy(batch.enc_batch_extend_vocab).long()
-        enc_batch_extend_vocab = get_cuda(enc_batch_extend_vocab)
+    if not config.use_bpe:
+        if batch.enc_batch_extend_vocab is not None:
+            enc_batch_extend_vocab = T.from_numpy(batch.enc_batch_extend_vocab).long()
+            enc_batch_extend_vocab = get_cuda(enc_batch_extend_vocab)
 
     extra_zeros = None
-    if batch.max_art_oovs > 0:
-        extra_zeros = T.zeros(batch_size, batch.max_art_oovs)
-        extra_zeros = get_cuda(extra_zeros)
+    if not config.use_bpe:
+        if batch.max_art_oovs > 0:
+            extra_zeros = T.zeros(batch_size, batch.max_art_oovs)
+            extra_zeros = get_cuda(extra_zeros)
 
     return enc_batch, enc_lens, enc_padding_mask, enc_batch_extend_vocab, extra_zeros, ct_e
 

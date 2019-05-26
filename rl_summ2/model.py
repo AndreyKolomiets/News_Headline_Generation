@@ -166,21 +166,25 @@ class Decoder(nn.Module):
 
         ct_d, prev_s = self.dec_attention(dec_h, prev_s)  # intra-decoder attention
 
-        p_gen = T.cat([ct_e, ct_d, st_hat, x], 1)
-        p_gen = self.p_gen_linear(p_gen)  # bs,1
-        p_gen = T.sigmoid(p_gen)  # bs,1
-
         out = T.cat([dec_h, ct_e, ct_d], dim=1)  # bs, 4*n_hid
         out = self.V(out)  # bs,n_hid
         out = self.V1(out)  # bs, n_vocab
         vocab_dist = F.softmax(out, dim=1)
-        vocab_dist = p_gen * vocab_dist
-        attn_dist_ = (1 - p_gen) * attn_dist
 
+        # TODO: проверка extra_zeros была и в исходной версии, надо разобраться, как правильней
         # pointer mechanism (as suggested in eq 9 https://arxiv.org/pdf/1704.04368.pdf)
-        if extra_zeros is not None:
+        # if extra_zeros is not None:
+
+        if (enc_batch_extend_vocab is not None) and (extra_zeros is not None):
+            p_gen = T.cat([ct_e, ct_d, st_hat, x], 1)
+            p_gen = self.p_gen_linear(p_gen)  # bs,1
+            p_gen = T.sigmoid(p_gen)  # bs,1
+            vocab_dist = p_gen * vocab_dist
             vocab_dist = T.cat([vocab_dist, extra_zeros], dim=1)
-        final_dist = vocab_dist.scatter_add(1, enc_batch_extend_vocab, attn_dist_)
+            attn_dist_ = (1 - p_gen) * attn_dist
+            final_dist = vocab_dist.scatter_add(1, enc_batch_extend_vocab, attn_dist_)
+        else:
+            final_dist = vocab_dist
 
         return final_dist, s_t, ct_e, sum_temporal_srcs, prev_s
 

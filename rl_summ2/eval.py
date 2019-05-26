@@ -11,8 +11,11 @@ from rl_summ2.model import Model
 import datetime
 
 from rl_summ2.data_util import config, data
-from rl_summ2.data_util.batcher import Batcher
-from rl_summ2.data_util.data import Vocab
+if not config.use_bpe:
+    from rl_summ2.data_util.batcher import Batcher
+else:
+    from pointer_summarizer.data_util.batcher_bpe import Batcher
+from rl_summ2.data_util.data import Vocab, make_bpe_vocab
 from rl_summ2.train_util import get_cuda, get_enc_data
 from rl_summ2.beam_search import beam_search
 from rouge import Rouge
@@ -23,7 +26,18 @@ from pointer_summarizer.training_ptr_gen.train_util import init_logger
 
 class Evaluate(object):
     def __init__(self, data_path, opt, batch_size=config.batch_size):
-        self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        if config.use_bpe:
+            self.vocab = make_bpe_vocab(config.bpe_vocab_path)
+            # self.start_id = self.vocab.word_vocab[data.START_DECODING]
+            # self.end_id = self.vocab.word_vocab[data.STOP_DECODING]
+            # self.pad_id = self.vocab.word_vocab[data.PAD_TOKEN]
+            # self.unk_id = self.vocab.word_vocab[data.UNKNOWN_TOKEN]
+        else:
+            self.vocab = Vocab(config.vocab_path, config.vocab_size)
+            # self.start_id = self.vocab.word2id(data.START_DECODING)
+            # self.end_id = self.vocab.word2id(data.STOP_DECODING)
+            # self.pad_id = self.vocab.word2id(data.PAD_TOKEN)
+            # self.unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
         self.batcher = Batcher(data_path, self.vocab, mode='eval',
                                batch_size=batch_size, single_pass=True)
         self.opt = opt
@@ -51,9 +65,14 @@ class Evaluate(object):
 
         self.setup_valid()
         batch = self.batcher.next_batch()
-        start_id = self.vocab.word2id(data.START_DECODING)
-        end_id = self.vocab.word2id(data.STOP_DECODING)
-        unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
+        if not config.use_bpe:
+            start_id = self.vocab.word2id(data.START_DECODING)
+            end_id = self.vocab.word2id(data.STOP_DECODING)
+            unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
+        else:
+            start_id = self.vocab.word_vocab[data.START_DECODING]
+            end_id = self.vocab.word_vocab[data.STOP_DECODING]
+            unk_id = self.vocab.word_vocab[data.UNKNOWN_TOKEN]
         decoded_sents: List[str] = []
         ref_sents = []
         article_sents = []
@@ -115,11 +134,14 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
     if opt.task == "validate":
-        saved_models = [config.log_root + opt.model_name + '/' + f
-                        for f in os.listdir(config.log_root + opt.model_name)
+        root = config.log_root + opt.model_name + '/'
+        # TODO: здесь нужно как-то обновлять список сериализованных моделей, при этом не нарваться на SetChangedSize
+        saved_models = [root + f
+                        for f in os.listdir(root)
                         if (not f.startswith('events.')) and (not f.startswith('logfile'))]
         saved_models.sort()
         saved_models = saved_models[opt.start_from:]
+        print(saved_models)
         for f in saved_models:
             opt.load_model = f
             eval_processor = Evaluate(config.valid_data_path, opt)

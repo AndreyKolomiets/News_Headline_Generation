@@ -11,14 +11,18 @@ from tensorboardX import SummaryWriter
 from rl_summ2.model import Model
 
 from rl_summ2.data_util import config, data
-from rl_summ2.data_util.batcher import Batcher
 from rl_summ2.data_util.data import Vocab
-from rl_summ2.train_util import *
+from rl_summ2.train_util import get_enc_data, get_dec_data, get_cuda
+from pointer_summarizer.data_util.data import make_bpe_vocab
 from torch.distributions import Categorical
 from rouge import Rouge
 from numpy import random
 import argparse
 import traceback
+if not config.use_bpe:
+    from rl_summ2.data_util.batcher import Batcher
+else:
+    from pointer_summarizer.data_util.batcher_bpe import Batcher
 
 random.seed(123)
 T.manual_seed(123)
@@ -28,14 +32,22 @@ if T.cuda.is_available():
 
 class Train(object):
     def __init__(self, opt):
-        self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        if config.use_bpe:
+            self.vocab = make_bpe_vocab(config.bpe_vocab_path)
+            self.start_id = self.vocab.word_vocab[data.START_DECODING]
+            self.end_id = self.vocab.word_vocab[data.STOP_DECODING]
+            self.pad_id = self.vocab.word_vocab[data.PAD_TOKEN]
+            self.unk_id = self.vocab.word_vocab[data.UNKNOWN_TOKEN]
+        else:
+            self.vocab = Vocab(config.vocab_path, config.vocab_size)
+            self.start_id = self.vocab.word2id(data.START_DECODING)
+            self.end_id = self.vocab.word2id(data.STOP_DECODING)
+            self.pad_id = self.vocab.word2id(data.PAD_TOKEN)
+            self.unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
         self.args = opt
-        self.start_id = self.vocab.word2id(data.START_DECODING)
-        self.end_id = self.vocab.word2id(data.STOP_DECODING)
-        self.pad_id = self.vocab.word2id(data.PAD_TOKEN)
-        self.unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
+
         time.sleep(5)
         self.writer = SummaryWriter(config.log_root + args.model_name)
         self.iter = 0
@@ -53,6 +65,7 @@ class Train(object):
         self.model = get_cuda(self.model)
         self.trainer = T.optim.Adam(self.model.parameters(), lr=config.lr)
         start_iter = 0
+        # TODO: здесь нужно переписать
         if self.args.load_model is not None:
             load_model_path = os.path.join(config.save_model_path, self.args.load_model)
             checkpoint = T.load(load_model_path)
@@ -166,7 +179,7 @@ class Train(object):
         decoded_strs = []
         for i in range(len(enc_out)):
             id_list = inds[i].cpu().numpy()
-            oovs = article_oovs[i]
+            oovs = article_oovs[i] if article_oovs is not None else None
             S = data.outputids2words(id_list, self.vocab, oovs)  # Generate sentence corresponding to sampled words
             try:
                 end_idx = S.index(data.STOP_DECODING)
@@ -227,13 +240,17 @@ class Train(object):
         # --------------RL training-----------------------------------------------------
         if self.args.train_rl == "yes":  # perform reinforcement learning training
             # multinomial sampling
+            if not config.use_bpe:
+                art_oovs = batch.art_oovs
+            else:
+                art_oovs = None
             sample_sents, RL_log_probs = self.train_batch_RL(enc_out, enc_hidden, enc_padding_mask, context,
-                                                             extra_zeros, enc_batch_extend_vocab, batch.art_oovs,
+                                                             extra_zeros, enc_batch_extend_vocab, art_oovs,
                                                              greedy=False)
             with T.autograd.no_grad():
                 # greedy sampling
                 greedy_sents, _ = self.train_batch_RL(enc_out, enc_hidden, enc_padding_mask, context, extra_zeros,
-                                                      enc_batch_extend_vocab, batch.art_oovs, greedy=True)
+                                                      enc_batch_extend_vocab, art_oovs, greedy=True)
 
             sample_reward = self.reward_function(sample_sents, batch.original_abstracts)
             baseline_reward = self.reward_function(greedy_sents, batch.original_abstracts)
