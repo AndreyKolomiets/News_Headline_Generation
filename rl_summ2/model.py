@@ -113,11 +113,11 @@ class decoder_attention(nn.Module):
             self.v = nn.Linear(config.hidden_dim, 1, bias=False)
 
     def forward(self, s_t, prev_s):
-        '''Perform intra_decoder attention
+        """Perform intra_decoder attention
         Args
         :param s_t: hidden state of decoder at current time step
         :param prev_s: If intra_decoder attention, contains list of previous decoder hidden states
-        '''
+        """
         if config.intra_decoder is False:
             ct_d = get_cuda(T.zeros(s_t.size()))
         elif prev_s is None:

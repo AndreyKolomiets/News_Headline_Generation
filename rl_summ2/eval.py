@@ -2,6 +2,7 @@ import os
 # жесткий хардкод, лучше проставлять ручками при запуске
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import time
+from typing import List
 
 import torch as T
 import torch.nn as nn
@@ -32,6 +33,8 @@ class Evaluate(object):
     def setup_valid(self):
         self.model = Model()
         self.model = get_cuda(self.model)
+        self.logger.info(f'loading model {self.opt.load_model}')
+        print(f'loading model {self.opt.load_model}')
         checkpoint = T.load(self.opt.load_model)
         self.model.load_state_dict(checkpoint["model_dict"])
 
@@ -51,7 +54,7 @@ class Evaluate(object):
         start_id = self.vocab.word2id(data.START_DECODING)
         end_id = self.vocab.word2id(data.STOP_DECODING)
         unk_id = self.vocab.word2id(data.UNKNOWN_TOKEN)
-        decoded_sents = []
+        decoded_sents: List[str] = []
         ref_sents = []
         article_sents = []
         rouge = Rouge()
@@ -82,8 +85,8 @@ class Evaluate(object):
                 ref_sents.append(abstract)
                 article_sents.append(article)
             ii += 1
-            if ii % 1000 == 0:
-                print(f'1000 batches processed in {datetime.datetime.now() - t_start}')
+            if ii % 10 == 0:
+                print(f'10 batches processed in {datetime.datetime.now() - t_start}, total {ii} batches, {config.batch_size * ii} samples')
                 t_start = datetime.datetime.now()
 
             batch = self.batcher.next_batch()

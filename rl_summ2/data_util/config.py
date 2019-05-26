@@ -1,6 +1,6 @@
 import re
 
-first_sentence_only = True
+first_sentence_only = False
 train_data_path = '/workspace/_Headline_generation/dataset_chunks/'
 test_data_path = '/workspace/_Headline_generation/test/'
 valid_data_path = '/workspace/_Headline_generation/val/'
@@ -20,7 +20,7 @@ use_bpe = True
 hidden_dim = 256
 emb_dim = 256
 batch_size = 200
-max_enc_steps = 55  # 99% of the articles are within length 55
+max_enc_steps = 150
 max_dec_steps = 15  # 99% of the titles are within length 15
 beam_size = 4
 min_dec_steps = 3
