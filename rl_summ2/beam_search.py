@@ -126,9 +126,12 @@ def beam_search(enc_hid, enc_out, enc_padding_mask, ct_e, extra_zeros, enc_batch
         extra_zeros_beam = None
         if extra_zeros is not None:
             extra_zeros_beam = extra_zeros[beam_idx].repeat(1, config.beam_size).view(-1, extra_zeros.size(1))
-        enc_extend_vocab_beam = enc_batch_extend_vocab[beam_idx].repeat(1, config.beam_size).view(-1,
-                                                                                                  enc_batch_extend_vocab.size(
-                                                                                                      1))
+        if enc_batch_extend_vocab is not None:
+            enc_extend_vocab_beam = enc_batch_extend_vocab[beam_idx].repeat(1, config.beam_size).view(-1,
+                                                                                                      enc_batch_extend_vocab.size(
+                                                                                                          1))
+        else:
+            enc_extend_vocab_beam = None
         # final_dist: rem*beam, n_extended_vocab
         final_dist, (dec_h, dec_c), ct_e, sum_temporal_srcs, prev_s = model.decoder(x_t, s_t, enc_out_beam,
                                                                                     enc_pad_mask_beam, ct_e,

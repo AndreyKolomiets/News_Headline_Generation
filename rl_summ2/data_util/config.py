@@ -13,7 +13,7 @@ if first_sentence_only:
     vocab_path = regex.sub('_1st_sent/', vocab_path)
 bpe_vocab_path = '/workspace/_Headline_generation/bpe_encoder.pkl'
 log_root = "/workspace/_Headline_generation/log_rl_summarizer/"
-use_bpe = False
+use_bpe = True
 
 # Hyperparameters
 hidden_dim = 256
@@ -36,3 +36,4 @@ save_model_path = "data/saved_models"
 
 intra_encoder = True
 intra_decoder = True
+pointer_gen = True and not use_bpe

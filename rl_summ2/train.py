@@ -1,11 +1,6 @@
-import os
-# TODO: еще один хардкод
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Set cuda device
-
 import time
 
 import torch as T
-import torch.nn as nn
 import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from rl_summ2.model import Model
@@ -19,6 +14,7 @@ from rouge import Rouge
 from numpy import random
 import argparse
 import traceback
+from pointer_summarizer.training_ptr_gen.train_util import init_logger
 if not config.use_bpe:
     from rl_summ2.data_util.batcher import Batcher
 else:
@@ -50,6 +46,7 @@ class Train(object):
 
         time.sleep(5)
         self.writer = SummaryWriter(config.log_root + args.model_name)
+        self.logger = init_logger('eval', config.log_root + opt.model_name + '/logfile.log')
         self.iter = 0
 
     def save_model(self, iter):
@@ -65,9 +62,8 @@ class Train(object):
         self.model = get_cuda(self.model)
         self.trainer = T.optim.Adam(self.model.parameters(), lr=config.lr)
         start_iter = 0
-        # TODO: здесь нужно переписать
         if self.args.load_model is not None:
-            load_model_path = os.path.join(config.save_model_path, self.args.load_model)
+            load_model_path = config.log_root + self.args.model_name + '/' + self.args.load_model
             checkpoint = T.load(load_model_path)
             start_iter = checkpoint["iter"]
             self.model.load_state_dict(checkpoint["model_dict"])
@@ -277,6 +273,11 @@ class Train(object):
         return mle_loss.item(), batch_reward
 
     def trainIters(self):
+        self.logger.info("Training mle: %s, Training rl: %s, mle weight: %.2f, rl weight: %.2f" % (
+            args.train_mle, args.train_rl, args.mle_weight, args.rl_weight))
+        self.logger.info(f"intra_encoder: {config.intra_encoder}, intra_decoder: {config.intra_decoder}")
+        param_dict = {attr: getattr(config, attr) for attr in dir(config) if not attr.startswith('__')}
+        self.logger.info(f'Config params: {param_dict}')
         iter = self.setup_train()
         count = mle_total = r_total = 0
         while iter <= config.max_iterations:

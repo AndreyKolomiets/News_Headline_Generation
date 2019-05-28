@@ -93,7 +93,11 @@ class Evaluate(object):
                                        self.model, start_id, end_id, unk_id)
 
             for i in range(len(pred_ids)):
-                decoded_words = data.outputids2words(pred_ids[i], self.vocab, batch.art_oovs[i])
+                if hasattr(batch, 'art_oovs'):
+                    art_oovs = batch.art_oovs[i]
+                else:
+                    art_oovs = None
+                decoded_words = data.outputids2words(pred_ids[i], self.vocab, art_oovs)
                 if len(decoded_words) < 2:
                     decoded_words = "xxx"
                 else:
@@ -105,7 +109,7 @@ class Evaluate(object):
                 article_sents.append(article)
             ii += 1
             if ii % 10 == 0:
-                print(f'10 batches processed in {datetime.datetime.now() - t_start}, total {ii} batches, {config.batch_size * ii} samples')
+                print(f'10 batches processed in {datetime.datetime.now() - t_start}, total {ii} batches, {self.batcher.batch_size * ii} samples')
                 t_start = datetime.datetime.now()
 
             batch = self.batcher.next_batch()
@@ -131,6 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--start_from", type=int, default=0)
     parser.add_argument("--load_model", type=str, default=None)
     parser.add_argument('--model_name', type=str)
+    parser.add_argument('--batch_size', type=int, default=200)
     opt = parser.parse_args()
 
     if opt.task == "validate":
@@ -144,7 +149,7 @@ if __name__ == "__main__":
         print(saved_models)
         for f in saved_models:
             opt.load_model = f
-            eval_processor = Evaluate(config.valid_data_path, opt)
+            eval_processor = Evaluate(config.valid_data_path, opt, batch_size=opt.batch_size)
             eval_processor.evaluate_batch()
     else:  # test
         eval_processor = Evaluate(config.test_data_path, opt)
