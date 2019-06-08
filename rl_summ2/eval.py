@@ -20,7 +20,7 @@ from rl_summ2.train_util import get_cuda, get_enc_data
 from rl_summ2.beam_search import beam_search
 from rouge import Rouge
 import argparse
-from tqdm import trange, tqdm
+import pickle
 from pointer_summarizer.training_ptr_gen.train_util import init_logger
 
 
@@ -111,13 +111,17 @@ class Evaluate(object):
             if ii % 10 == 0:
                 print(f'10 batches processed in {datetime.datetime.now() - t_start}, total {ii} batches, {self.batcher.batch_size * ii} samples')
                 t_start = datetime.datetime.now()
+            if ii % 40 == 0:
+                with open(self.opt.load_model + '_decoded.pkl', 'wb') as f:
+                    pickle.dump((decoded_sents, ref_sents), f, protocol=4)
 
             batch = self.batcher.next_batch()
         load_file = self.opt.load_model
 
         if print_sents:
             self.print_original_predicted(decoded_sents, ref_sents, article_sents, load_file)
-
+        with open(self.opt.load_model + '_decoded.pkl', 'wb') as f:
+            pickle.dump((decoded_sents, ref_sents), f)
         scores = rouge.get_scores(decoded_sents, ref_sents, avg=True)
         if self.opt.task == "test":
             print(load_file, "scores:", scores)
@@ -140,6 +144,7 @@ if __name__ == "__main__":
 
     if opt.task == "validate":
         root = config.log_root + opt.model_name + '/'
+        # opt.root = root
         # TODO: здесь нужно как-то обновлять список сериализованных моделей, при этом не нарваться на SetChangedSize
         saved_models = [root + f
                         for f in os.listdir(root)
