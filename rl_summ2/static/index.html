@@ -1,0 +1,49 @@
+<html>
+<head>
+    <style>
+        body {
+            text-align: center;
+        }
+        #result {
+            text-align: center;
+            font-size: 150%;
+            margin-top: 20px;
+        }
+        form button {
+            margin: 10px 0;
+            font-size: 150%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Генерация заголовков</h1>
+    <form id="form" action="/api/" method="post">
+        <textarea id="text" name="text" placeholder="Текст" cols="100" rows="20"></textarea><br>
+        <div>
+        </div>
+
+        <button type="submit">Сгенерировать</button>
+    </form>
+    <h2>Результат</h2>
+    <div id="generated" align="center"></div>
+    <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script>
+        $(function () {
+            $('#form').submit(function () {
+                $.ajax({
+                    type: "POST",
+                    url: $(this).attr('action'),
+                    data: JSON.stringify({text: $('#text').val()}),
+                    dataType: 'json',
+                    contentType: 'application/json; charset=utf-8',
+                    async: false,
+                    success: function (response) {
+                            $('#generated').html(response['res']).css('text-align', 'justify').css('color', 'red');
+                    }
+                });
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>
